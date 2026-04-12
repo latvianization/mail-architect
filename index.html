@@ -184,37 +184,42 @@
             <div class="inspector-section-label">Content</div>
             <div class="rte-wrap">
               <div class="rte-bar">
-                <button class="rte-btn" @mousedown.prevent="execFmt('bold')"><b>B</b></button>
-                <button class="rte-btn" @mousedown.prevent="execFmt('italic')"><i>I</i></button>
-                <button class="rte-btn" @mousedown.prevent="execFmt('underline')"><u>U</u></button>
-                <button class="rte-btn" @mousedown.prevent="startLink"><i class="fa-solid fa-link"></i></button>
+                <button class="rte-btn" @mousedown.prevent="execFmt('bold')" :class="{active:isFmt('bold')}"><b>B</b></button>
+                <button class="rte-btn" @mousedown.prevent="execFmt('italic')" :class="{active:isFmt('italic')}"><i>I</i></button>
+                <button class="rte-btn" @mousedown.prevent="execFmt('underline')" :class="{active:isFmt('underline')}"><u>U</u></button>
+                <button class="rte-btn" @mousedown.prevent="startLink" :class="{active:linkPop.show}"><i class="fa-solid fa-link"></i></button>
                 <button class="rte-btn" @mousedown.prevent="showRawHtml=!showRawHtml" :class="{active:showRawHtml}"><i class="fa-solid fa-code"></i></button>
               </div>
               <textarea v-if="showRawHtml" class="field-input rte-editor" v-model="selectedNode.content" @input="onRteInput"></textarea>
               <div v-else class="rte-editor" ref="rteEl" contenteditable="true" @input="onRteInput" @click="onRteClick" @keydown.enter.exact.prevent="insertRteBr"></div>
               
               <!-- Link Popup -->
-              <div class="link-popup" v-if="linkPop.show">
+              <div class="link-popup" v-if="linkPop.show" v-click-outside="()=>linkPop.show=false">
                 <div class="field-label">Address</div>
-                <input class="field-input mb-1" v-model="linkPop.url" placeholder="https://..." @keyup.enter="applyLink">
-                <div class="d-flex gap-1 mb-2">
-                  <div style="flex:1">
+                <input class="field-input mb-3" v-model="linkPop.url" placeholder="https://..." @keyup.enter="applyLink" ref="linkInput">
+                <div class="row g-2 mb-3">
+                  <div class="col-6">
+                    <div class="field-label">Target</div>
                     <select class="field-select" v-model="linkPop.target">
-                      <option value="">Default</option>
                       <option value="_blank">New Tab</option>
-                      <option value="_self">Same Tab</option>
+                      <option value="">Same Tab</option>
                     </select>
                   </div>
-                  <div style="flex:1">
+                  <div class="col-6">
+                    <div class="field-label">Theme</div>
                     <select class="field-select" v-model="linkPop.cls">
-                      <option value="">No Theme</option>
+                      <option value="">None</option>
                       <option v-for="c in classes" :key="c.name" :value="c.name">{{c.name}}</option>
                     </select>
                   </div>
                 </div>
-                <div class="d-flex gap-1">
-                  <button class="btn-export py-1" style="flex:1" @click="applyLink">Apply</button>
-                  <button class="btn-outline-sm" @click="linkPop.show=false">Cancel</button>
+                <div class="d-flex justify-content-between pt-2 border-top">
+                  <button class="btn-outline-sm py-1" v-if="linkPop.editNode" @click="removeLinkFromPopup" style="color:#ef4444;border-color:#fee2e2">Remove Link</button>
+                  <div v-else></div>
+                  <div class="d-flex gap-2">
+                    <button class="btn-outline-sm py-1 px-3" @click="linkPop.show=false">Cancel</button>
+                    <button class="btn-export py-1 px-4" @click="applyLink" style="border-radius:8px">Apply</button>
+                  </div>
                 </div>
               </div>
             </div>

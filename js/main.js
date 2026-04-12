@@ -29,6 +29,7 @@ const app = createApp({
 
     // IO menu
     const ioMenuOpen = ref(false);
+    const linkInput = ref(null);
     const vClickOutside = {
       mounted(el, binding) {
         el._clickOutside = (ev) => { if (!(el === ev.target || el.contains(ev.target))) binding.value(ev); };
@@ -381,11 +382,32 @@ const app = createApp({
       const sel=window.getSelection();
       if(sel&&sel.rangeCount) linkPop.savedRange=sel.getRangeAt(0).cloneRange();
     }
+    function isFmt(cmd){
+      try { return document.queryCommandState(cmd); } catch { return false; }
+    }
     function startLink(){
-      saveRange();
       const sel=window.getSelection();
-      if(!sel||sel.isCollapsed){ toast('Select text first to add a link',false); return; }
+      if(!sel) return;
+      
+      // Check if we are already in a link
+      let el = sel.anchorNode;
+      if(el && el.nodeType===3) el = el.parentElement;
+      const a = el ? el.closest('a') : null;
+      
+      if(a) {
+        // Edit mode
+        linkPop.editNode = a;
+        linkPop.url = a.getAttribute('href') || '';
+        linkPop.cls = a.getAttribute('class') || '';
+        linkPop.target = a.getAttribute('target') || '';
+        linkPop.show = true;
+        return;
+      }
+
+      if(sel.isCollapsed){ toast('Select text first to add a link',false); return; }
+      saveRange();
       linkPop.editNode=null; linkPop.url=''; linkPop.cls=''; linkPop.target='_blank'; linkPop.show=true;
+      nextTick(() => { if(linkInput.value) linkInput.value.focus(); });
     }
     function applyLink(){
       if(!linkPop.url) return;
@@ -844,7 +866,7 @@ const app = createApp({
       importOpen,importText,importErr,importFileInput,triggerImport,handleFileImport,applyImport,openImportModal,
       hoverNodeId,setHoverNode,
       prevSel,openLinkFromPreview,
-      showRawHtml,rteEl,linkPop,execFmt,startLink,applyLink,removeLink,removeLinkFromPopup,onRteInput,onRteClick,insertRteBr,
+      showRawHtml,rteEl,linkInput,linkPop,execFmt,isFmt,startLink,applyLink,removeLink,removeLinkFromPopup,onRteInput,onRteClick,insertRteBr,
       leftW,treeW,rightW,startResize,
     };
   },
