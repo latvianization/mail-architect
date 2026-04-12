@@ -4,7 +4,7 @@ const TreeNodeComp = {
   props:{node:Object,selectedId:String},
   emits:['select','delete','hover'],
   components:{'Draggable': window.vuedraggable},
-  template:`
+  template: `
     <div class="tree-node" @mouseleave.self="$emit('hover',null)" :data-type="node.type">
       <div class="tree-node-row" :class="{selected:node.id===selectedId}"
            :data-type="node.type"
@@ -12,7 +12,7 @@ const TreeNodeComp = {
            @mouseenter.stop="$emit('hover',node.id)"
            @mouseleave.stop="$emit('hover',null)">
         <i class="tree-node-icon" :class="iconFor(node.type)"></i>
-        <span class="tree-node-type">{{node.type}}</span>
+        <span class="tree-node-type">{{node.type.replace('mj-','')}}</span>
         <div class="node-classes">
           <span class="node-class-tag" v-for="c in (node.classes||[]).slice(0,2)" :key="c" :title="c">.{{c}}</span>
           <span class="node-class-tag" v-if="(node.classes||[]).length>2" style="color:#94a3b8">+{{node.classes.length-2}}</span>
@@ -35,13 +35,13 @@ const TreeNodeComp = {
                        @hover="$emit('hover',$event)"></tree-node>
           </template>
           <template #footer>
-            <div class="drop-hint-list" :class="{ 'persistent-hint': node.children.length > 0 }">
-              <div class="drop-hint-title">Drop or Add:</div>
-              <div class="drop-hint-items">
-                <button v-for="c in getAllowed()" :key="c.type" class="drop-hint-btn" @click="addChild(c.type)">
-                  + {{c.name}}
-                </button>
-              </div>
+            <div class="drop-hint-list" v-if="getAllowed().length">
+              <select class="drop-select-add" @change="onAddSelect($event)">
+                <option value="">+ Add Component…</option>
+                <option v-for="c in getAllowed()" :key="c.type" :value="c.type">
+                   Add {{c.name}}
+                </option>
+              </select>
             </div>
           </template>
         </Draggable>
@@ -60,8 +60,18 @@ const TreeNodeComp = {
       const types = allowedChildrenMap[this.node.type] || [];
       return types.map(t => {
         const item = compLib.find(c => c.type === t);
-        return { type: t, name: item ? item.name : t.replace('mj-', '') };
+        // User wants full names
+        return { 
+          type: t, 
+          name: item ? item.name : t.replace('mj-', '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+        };
       });
+    },
+    onAddSelect(e){
+      const type = e.target.value;
+      if(!type) return;
+      this.addChild(type);
+      e.target.value = '';
     },
     addChild(type){
       if (!this.node.children) this.node.children = [];

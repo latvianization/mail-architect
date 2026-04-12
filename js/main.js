@@ -161,7 +161,28 @@ const app = createApp({
     function toggleInlineEdit(name){ inlineEditClass.value = inlineEditClass.value===name ? null : name; }
     function addClass(){ if(pendingClass.value&&selectedNode.value){ if(!selectedNode.value.classes)selectedNode.value.classes=[];selectedNode.value.classes.push(pendingClass.value);pendingClass.value=''; } }
     function removeClass(n){ if(selectedNode.value){ selectedNode.value.classes=(selectedNode.value.classes||[]).filter(c=>c!==n); if(inlineEditClass.value===n) inlineEditClass.value=null; } }
-    function createClass(){ const name=newClassName.value.trim().toLowerCase().replace(/[^a-z0-9_-]/g,'-');if(!name||classes.value.find(c=>c.name===name))return;classes.value.unshift({name,props:{},dark:false,darkProps:{},_open:true,_pk:'',_pv:'',_dpk:'',_dpv:''});newClassName.value=''; }
+    function createClass(){ 
+      const name = newClassName.value.trim().toLowerCase().replace(/[^a-z0-9_-]/g,'-');
+      if(!name) return null;
+      const existing = classes.value.find(c => c.name === name);
+      if(existing) { 
+        newClassName.value = '';
+        return existing; 
+      }
+      const cls = {name, props:{}, dark:false, darkProps:{}, _open:true, _pk:'', _pv:'', _dpk:'', _dpv:''};
+      classes.value.unshift(cls);
+      newClassName.value = '';
+      return cls;
+    }
+    function createAndApplyClass(){
+      const cls = createClass();
+      if(cls && selectedNode.value){
+        if(!selectedNode.value.classes) selectedNode.value.classes = [];
+        if(!selectedNode.value.classes.includes(cls.name)) {
+          selectedNode.value.classes.push(cls.name);
+        }
+      }
+    }
     function deleteClass(i){ classes.value.splice(i,1); }
     function toggleClass(ci) {
       const target = classes.value[ci];
@@ -173,13 +194,14 @@ const app = createApp({
       toggleInlineEdit(name);
     }
     function goToClassDef(name) {
-      tab.value = 'classes';
-      classes.value.forEach(c => c._open = false);
-      const c = classes.value.find(x => x.name === name);
-      if (c) c._open = true;
+      selectedId.value = null; // Unselect to show overall class list
       nextTick(() => {
-        const el = document.getElementById('cls-card-' + name);
-        if (el) el.scrollIntoView({behavior: 'smooth', block: 'start'});
+        const c = classes.value.find(x => x.name === name);
+        if (c) c._open = true;
+        nextTick(() => {
+          const el = document.getElementById('cls-card-' + name);
+          if (el) el.scrollIntoView({behavior: 'smooth', block: 'start'});
+        });
       });
     }
     function addProp(cls){ if(cls._pk){cls.props[cls._pk]=cls._pv||'';cls._pk='';cls._pv=''; scheduleRender();} }
@@ -560,6 +582,23 @@ const app = createApp({
               el=el.parentElement;
             }
           },true);
+
+          doc.addEventListener('dblclick',(e)=>{
+            e.preventDefault();
+            let el=e.target;
+            while(el&&el!==doc.body){
+              const mc=[...el.classList].find(c=>c.startsWith('mja-')&&c!=='mja-hl');
+              if(mc){ 
+                selectNode(mc.replace('mja-','')); 
+                nextTick(() => {
+                  if (rteEl.value) rteEl.value.focus();
+                });
+                return; 
+              }
+              el=el.parentElement;
+            }
+          },true);
+
           const st=doc.createElement('style');
           st.textContent='body *{cursor:pointer!important}';
           doc.head.appendChild(st);
@@ -695,8 +734,10 @@ const app = createApp({
     }
 
     // ── Panel resize ─────────────────────────────────────────
-    const leftW = ref(parseInt(localStorage.getItem('mb-leftW'))||110);
+    const leftW = ref(parseInt(localStorage.getItem('mb-leftW'))||120);
     const treeW = ref(parseInt(localStorage.getItem('mb-treeW'))||280);
+    const rightW = ref(parseInt(localStorage.getItem('mb-rightW'))||360);
+
     function startResize(e, panel){
       e.preventDefault();
       const handle = e.currentTarget;
@@ -704,15 +745,21 @@ const app = createApp({
       document.body.style.cursor = 'col-resize';
       document.body.style.userSelect = 'none';
       const startX = e.clientX;
-      const startW = panel==='left' ? leftW.value : treeW.value;
+      const startLW = leftW.value;
+      const startTW = treeW.value;
+      const startRW = rightW.value;
+
       function onMove(ev){
         const delta = ev.clientX - startX;
         if(panel==='left'){
-          leftW.value = Math.max(120, Math.min(320, startW + delta));
+          leftW.value = Math.max(120, Math.min(320, startLW + delta));
           localStorage.setItem('mb-leftW', leftW.value);
-        } else {
-          treeW.value = Math.max(180, Math.min(520, startW + delta));
+        } else if(panel==='tree'){
+          treeW.value = Math.max(180, Math.min(520, startTW + delta));
           localStorage.setItem('mb-treeW', treeW.value);
+        } else if(panel==='right'){
+          rightW.value = Math.max(300, Math.min(600, startRW - delta));
+          localStorage.setItem('mb-rightW', rightW.value);
         }
       }
       function onUp(){
@@ -754,7 +801,7 @@ const app = createApp({
       }),tree,classes,
       cloneNode,selectNode,deleteNode,clearDoc,
       pendingClass,inlineEditClass,availableClasses,getClassObj,toggleInlineEdit,addClass,removeClass,
-      newClassName,createClass,deleteClass,toggleClass,editClass,goToClassDef,addProp,deleteProp,addDarkProp,deleteDarkProp,
+      newClassName,createClass,createAndApplyClass,deleteClass,toggleClass,editClass,goToClassDef,addProp,deleteProp,addDarkProp,deleteDarkProp,
       addPropImmediate,addDarkPropImmediate,
       nodeHasContent,stdAttrs,iconFor,propSuggestions,
       isColorProp,colorToHex,disableSystemDark,
@@ -766,7 +813,7 @@ const app = createApp({
       hoverNodeId,setHoverNode,
       prevSel,openLinkFromPreview,
       showRawHtml,rteEl,linkPop,execFmt,startLink,applyLink,removeLink,removeLinkFromPopup,onRteInput,onRteClick,insertRteBr,
-      leftW,treeW,startResize,
+      leftW,treeW,rightW,startResize,
     };
   }
 });

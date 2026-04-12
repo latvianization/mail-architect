@@ -36,10 +36,11 @@ This file serves as a persistent context for AI agents working on this repositor
 
 ## Recent Changes (2026-04-12)
 - **Refactoring**: Split the monolithic `email-builder.html` into a modular structure (`index.html`, `css/`, `js/`).
-- **Externalized Assets**: Moved logic to dedicated JS files to improve maintainability.
-- **AI Context**: Initialized `AI_CONTEXT.md` to streamline agent interactions.
+- **UI/UX Modernization**: Implemented a premium, high-density design system.
+- **Workflow Optimization**: Unified class management with inline creation, added component dropdowns in the structural tree, and synchronized Dark Mode overrides.
 
 ## Focus Areas for Future Work
-- Improving component nesting reliability.
-- Expanding the component library (e.g., more social icons, navbar presets).
-- Enhancing the Rich Text Editor (RTE) with more MJML-specific features.
+- **Component Nesting**: Improving structural reliability of nested components.
+- **RTE Features**: Enhanced link management and custom style injection.
+- **Templates**: Adding a library of pre-built MJML layouts for faster onboarding.
+- **Templates**: Adding a library of pre-built MJML layouts for faster onboarding.
