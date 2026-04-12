@@ -29,6 +29,13 @@ const app = createApp({
 
     // IO menu
     const ioMenuOpen = ref(false);
+    const vClickOutside = {
+      mounted(el, binding) {
+        el._clickOutside = (ev) => { if (!(el === ev.target || el.contains(ev.target))) binding.value(ev); };
+        document.addEventListener('click', el._clickOutside);
+      },
+      unmounted(el) { document.removeEventListener('click', el._clickOutside); }
+    };
     function closeIoMenu(e){ if(!e.target.closest('#io-wrap')) ioMenuOpen.value=false; }
     onMounted(()=>document.addEventListener('click',closeIoMenu));
 
@@ -733,6 +740,31 @@ const app = createApp({
       toast('Started new email');
     }
 
+    function downloadHtml(){
+      const html = mjmlSource.value; 
+      const blob = new Blob([html], {type:'text/html'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'email-export.html';
+      a.click();
+      URL.revokeObjectURL(url);
+      ioMenuOpen.value = false;
+      toast('HTML file downloaded');
+    }
+    function exportMjml(){
+      const mj = cleanMjmlSource.value;
+      const blob = new Blob([mj], {type:'text/xml'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'email-project.mjml';
+      a.click();
+      URL.revokeObjectURL(url);
+      ioMenuOpen.value = false;
+      toast('MJML project downloaded');
+    }
+
     // ── Panel resize ─────────────────────────────────────────
     const leftW = ref(parseInt(localStorage.getItem('mb-leftW'))||120);
     const treeW = ref(parseInt(localStorage.getItem('mb-treeW'))||280);
@@ -815,6 +847,13 @@ const app = createApp({
       showRawHtml,rteEl,linkPop,execFmt,startLink,applyLink,removeLink,removeLinkFromPopup,onRteInput,onRteClick,insertRteBr,
       leftW,treeW,rightW,startResize,
     };
-  }
+  },
+  directives: { 'click-outside': (el, binding) => { /* placeholder if needed, using the const above */ } }
+}).directive('click-outside', {
+  mounted(el, binding) {
+    el._clickOutside = (ev) => { if (!(el === ev.target || el.contains(ev.target))) binding.value(ev); };
+    document.addEventListener('click', el._clickOutside);
+  },
+  unmounted(el) { document.removeEventListener('click', el._clickOutside); }
 });
 app.mount('#app');

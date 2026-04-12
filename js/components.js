@@ -4,6 +4,7 @@ const TreeNodeComp = {
   props:{node:Object,selectedId:String},
   emits:['select','delete','hover'],
   components:{'Draggable': window.vuedraggable},
+  data() { return { showAddMenu: false }; },
   template: `
     <div class="tree-node" @mouseleave.self="$emit('hover',null)" :data-type="node.type">
       <div class="tree-node-row" :class="{selected:node.id===selectedId}"
@@ -15,7 +16,6 @@ const TreeNodeComp = {
         <span class="tree-node-type">{{node.type.replace('mj-','')}}</span>
         <div class="node-classes">
           <span class="node-class-tag" v-for="c in (node.classes||[]).slice(0,2)" :key="c" :title="c">.{{c}}</span>
-          <span class="node-class-tag" v-if="(node.classes||[]).length>2" style="color:#94a3b8">+{{node.classes.length-2}}</span>
         </div>
         <button class="tree-node-delete" @click.stop="$emit('delete',node)"><i class="fa-solid fa-xmark"></i></button>
       </div>
@@ -27,7 +27,10 @@ const TreeNodeComp = {
                      put: (to, from, dragEl) => checkDrop(node.type, dragEl)
                    }" 
                    item-key="id"
-                   ghost-class="sortable-ghost" drag-class="sortable-drag" class="drop-zone">
+                   ghost-class="sortable-ghost" 
+                   drag-class="sortable-drag" 
+                   class="drop-zone"
+                   :data-parent-type="node.type">
           <template #item="{element}">
             <tree-node :node="element" :selected-id="selectedId"
                        @select="$emit('select',$event)"
@@ -35,13 +38,23 @@ const TreeNodeComp = {
                        @hover="$emit('hover',$event)"></tree-node>
           </template>
           <template #footer>
-            <div class="drop-hint-list" v-if="getAllowed().length">
-              <select class="drop-select-add" @change="onAddSelect($event)">
-                <option value="">+ Add Component…</option>
-                <option v-for="c in getAllowed()" :key="c.type" :value="c.type">
-                   Add {{c.name}}
-                </option>
-              </select>
+            <div class="drop-hint-area" v-if="getAllowed().length">
+              <!-- Custom Pretty Dropdown -->
+              <div class="custom-add-wrap">
+                <button class="btn-add-inline" @click.stop="showAddMenu = !showAddMenu">
+                  <i class="fa-solid fa-plus me-1"></i> Add Component
+                </button>
+                <div class="custom-add-menu" v-if="showAddMenu" v-click-outside="()=>showAddMenu=false">
+                  <div class="custom-add-label">Add to {{node.type.replace('mj-','')}}</div>
+                  <button v-for="c in getAllowed()" :key="c.type" class="custom-add-item" @click="addChild(c.type)">
+                    {{c.name}}
+                  </button>
+                </div>
+              </div>
+              <div class="drop-here-label">Drop here to add to {{node.type.replace('mj-','')}}</div>
+            </div>
+            <div class="drop-hint-area empty" v-else-if="node.children.length === 0">
+               <span class="text-muted" style="font-size:10px">No components allowed here</span>
             </div>
           </template>
         </Draggable>
@@ -60,22 +73,16 @@ const TreeNodeComp = {
       const types = allowedChildrenMap[this.node.type] || [];
       return types.map(t => {
         const item = compLib.find(c => c.type === t);
-        // User wants full names
         return { 
           type: t, 
           name: item ? item.name : t.replace('mj-', '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
         };
       });
     },
-    onAddSelect(e){
-      const type = e.target.value;
-      if(!type) return;
-      this.addChild(type);
-      e.target.value = '';
-    },
     addChild(type){
       if (!this.node.children) this.node.children = [];
       this.node.children.push(makeNode(type));
+      this.showAddMenu = false;
     }
   }
 };

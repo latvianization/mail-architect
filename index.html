@@ -42,8 +42,8 @@
 
       <div class="tool-group">
         <button class="tool-btn" @click="promptNewEmail" title="New Email"><i class="fa-regular fa-file"></i></button>
-        <button class="tool-btn" @click="undo" :disabled="!canUndo" style="opacity:!canUndo?0.4:1"><i class="fa-solid fa-rotate-left"></i></button>
-        <button class="tool-btn" @click="redo" :disabled="!canRedo" style="opacity:!canRedo?0.4:1"><i class="fa-solid fa-rotate-right"></i></button>
+        <button class="tool-btn" @click="undo" :disabled="!canUndo" :style="{opacity:!canUndo?0.4:1}"><i class="fa-solid fa-rotate-left"></i></button>
+        <button class="tool-btn" @click="redo" :disabled="!canRedo" :style="{opacity:!canRedo?0.4:1}"><i class="fa-solid fa-rotate-right"></i></button>
       </div>
 
       <div class="vd"></div>
@@ -57,19 +57,20 @@
       <div class="vd"></div>
 
       <!-- Export / Import -->
-      <div class="io-wrap" id="io-wrap">
+      <div class="io-wrap" style="position:relative">
         <div class="btn-group">
           <button class="btn-export" @click="openExport"><i class="fa-solid fa-paper-plane me-1"></i> Get HTML</button>
-          <button class="btn-export ps-2 pe-3" style="border-left:1px solid rgba(255,255,255,0.2)" @click="ioMenuOpen=!ioMenuOpen">
+          <button class="btn-export ps-2 pe-3" style="border-left:1px solid rgba(255,255,255,0.2)" @click.stop="ioMenuOpen=!ioMenuOpen">
             <i class="fa-solid fa-chevron-down ms-1" style="font-size:10px"></i>
           </button>
         </div>
-        <div class="io-dropdown" v-show="ioMenuOpen" @click.stop>
+        <div class="io-dropdown" v-if="ioMenuOpen" v-click-outside="()=>ioMenuOpen=false">
           <div class="io-lbl">Export</div>
-          <button class="io-item" @click="exportMjml"><i class="fa-solid fa-file-arrow-down" style="color:#6366f1"></i> Download MJML (.mjml)</button>
+          <button class="io-item" @click="exportMjml"><i class="fa-solid fa-file-arrow-down" style="color:#6366f1"></i> Download Project (.mjml)</button>
+          <button class="io-item" @click="downloadHtml"><i class="fa-solid fa-download" style="color:#6366f1"></i> Download HTML (.html)</button>
           <div class="io-lbl" style="border-top:1px solid #f1f5f9">Import</div>
-          <button class="io-item" @click="triggerImport"><i class="fa-solid fa-file-arrow-up" style="color:#10b981"></i> Open MJML File</button>
-          <button class="io-item" @click="openImportModal"><i class="fa-solid fa-paste" style="color:#10b981"></i> Paste Code…</button>
+          <button class="io-item" @click="triggerImport"><i class="fa-solid fa-file-arrow-up" style="color:#10b981"></i> Open MJML File…</button>
+          <button class="io-item" @click="openImportModal"><i class="fa-solid fa-paste" style="color:#10b981"></i> Paste MJML Code…</button>
         </div>
       </div>
 
@@ -106,9 +107,6 @@
         <div class="tree-panel" :style="{width: treeW+'px'}">
           <div class="sidebar-title">
             <span>Structure</span>
-            <button @click="clearDoc" class="btn-outline-sm py-0 px-2" style="color:#ef4444;border:none;font-size:10px;height:20px" title="Reset Tree">
-              <i class="fa-solid fa-trash-can"></i>
-            </button>
           </div>
           
           <div class="tree-scroll">
@@ -174,11 +172,11 @@
         <!-- Selection View -->
         <template v-if="selectedNode">
           <div class="node-header">
-            <div class="node-header-icon"><i :class="iconFor(selectedNode.type)"></i></div>
-            <div>
-              <div class="node-header-type">{{selectedNode.type}}</div>
-              <div class="node-header-id">#{{selectedNode.id}}</div>
+            <div class="node-header-info">
+              <div class="node-header-icon"><i :class="iconFor(selectedNode.type)"></i></div>
+              <div class="node-header-badge">{{selectedNode.type.replace('mj-','')}}</div>
             </div>
+            <div class="node-header-id">#{{selectedNode.id}}</div>
           </div>
 
           <!-- Content Editor -->
