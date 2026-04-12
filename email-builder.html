@@ -1,0 +1,2325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MailArchitect — MJML Email Builder</title>
+<meta name="description" content="Professional MJML email builder with drag-and-drop, class-based styling, dark mode support, and multi-device preview.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vuedraggable@4.1.0/dist/vuedraggable.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mjml-browser@4.14.1/lib/index.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.15.1/beautify-html.min.js"></script>
+
+<style>
+/* ── Reset & base ─────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%;overflow:hidden;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#f0f2f5;color:#1e293b;font-size:13px}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:999px}
+::-webkit-scrollbar-thumb:hover{background:#94a3b8}
+
+/* ── App shell ────────────────────────────────────────────────── */
+#app{display:flex;flex-direction:column;height:100vh;width:100vw}
+
+/* ── Header ───────────────────────────────────────────────────── */
+.app-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 16px;height:52px;flex-shrink:0;z-index:100;
+  background:#ffffff;border-bottom:1px solid #e2e8f0;
+  box-shadow:0 1px 4px rgba(0,0,0,0.06);
+}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{
+  width:32px;height:32px;border-radius:8px;
+  background:linear-gradient(135deg,#4f46e5,#818cf8);
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:14px;flex-shrink:0;
+  box-shadow:0 2px 8px rgba(99,102,241,0.35);
+}
+.logo-name{font-size:16px;font-weight:800;color:#1e293b;letter-spacing:-0.4px}
+.logo-badge{
+  font-size:10px;font-weight:700;color:#6366f1;
+  background:#ede9fe;border:1px solid #c4b5fd;
+  padding:2px 8px;border-radius:4px;letter-spacing:0.4px;
+}
+
+/* ── Toolbar controls ─────────────────────────────────────────── */
+.tool-group{display:flex;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:2px;gap:1px}
+.tool-btn{
+  border:none;background:transparent;color:#64748b;
+  cursor:pointer;padding:5px 10px;border-radius:6px;
+  font-size:13px;transition:all 0.12s;line-height:1;
+}
+.tool-btn:hover{background:#e2e8f0;color:#1e293b}
+.tool-btn.active{background:#ffffff;color:#4f46e5;box-shadow:0 1px 3px rgba(0,0,0,0.1);font-weight:600}
+.tool-btn.active-sun{color:#d97706}
+.tool-btn.active-moon{color:#6366f1}
+
+.vd{width:1px;background:#e2e8f0;height:24px;margin:0 4px;flex-shrink:0}
+
+.btn-export{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 16px;background:linear-gradient(135deg,#4f46e5,#6366f1);
+  color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;
+  cursor:pointer;transition:all 0.15s;letter-spacing:0.2px;
+  box-shadow:0 2px 8px rgba(99,102,241,0.3);
+}
+.btn-export:hover{background:linear-gradient(135deg,#4338ca,#4f46e5);box-shadow:0 4px 14px rgba(99,102,241,0.4);transform:translateY(-1px)}
+
+.btn-outline-sm{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:5px 12px;background:transparent;color:#64748b;
+  border:1px solid #e2e8f0;border-radius:7px;font-size:12px;
+  font-weight:500;cursor:pointer;transition:all 0.12s;
+}
+.btn-outline-sm:hover{background:#f1f5f9;color:#334155;border-color:#cbd5e1}
+.btn-outline-sm.active-guide{border-color:#6366f1;color:#6366f1;background:#ede9fe}
+
+/* ── Body layout ──────────────────────────────────────────────── */
+.app-body{display:flex;flex:1;overflow:hidden}
+
+/* ── Left sidebar (components) ───────────────────────────────── */
+.sidebar-left{
+  background:#ffffff;border-right:none;
+  display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;
+}
+.sidebar-title{
+  padding:9px 12px 7px;font-size:9px;font-weight:800;
+  color:#94a3b8;text-transform:uppercase;letter-spacing:1.2px;
+  border-bottom:1px solid #f0f4f8;background:#fafbfc;
+}
+.comp-grid{display:grid;grid-template-columns:1fr;gap:3px;padding:5px;overflow-y:auto;flex:1;align-items:start;align-content:start}
+.comp-item{
+  background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;
+  padding:6px 8px;display:flex;flex-direction:row;align-items:center;
+  gap:8px;cursor:grab;user-select:none;transition:all 0.15s;
+  min-height:0;
+}
+.comp-item:hover{
+  border-color:#a5b4fc;background:#eef2ff;transform:translateY(-1px);
+  box-shadow:0 2px 8px rgba(99,102,241,0.15);
+}
+.comp-item:active{cursor:grabbing;transform:scale(0.97)}
+.comp-item-icon{font-size:15px;color:#6366f1;line-height:1;width:18px;text-align:center;flex-shrink:0;}
+.comp-item-content{flex:1;display:flex;flex-direction:column;gap:0;min-width:0;}
+.comp-item-name{font-size:11px;font-weight:700;color:#1e293b;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.comp-item-desc{display:none}
+.comp-item:hover .comp-item-name{color:#4f46e5}
+.comp-tip{
+  padding:5px 8px;font-size:9px;color:#94a3b8;text-align:center;
+  border-top:1px solid #f0f4f8;background:#fafbfc;flex-shrink:0;
+}
+
+/* ── Drag resize handles ────────────────────────────────────────── */
+.resize-handle{
+  width:5px;flex-shrink:0;cursor:col-resize;position:relative;
+  background:#e2e8f0;transition:background 0.15s;z-index:10;
+  user-select:none;
+}
+.resize-handle::after{
+  content:'';position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  width:3px;height:28px;border-radius:2px;
+  background:#c4b5fd;opacity:0;transition:opacity 0.15s;
+}
+.resize-handle:hover,.resize-handle.dragging{
+  background:#ddd6fe;
+}
+.resize-handle:hover::after,.resize-handle.dragging::after{
+  opacity:1;
+}
+
+/* ── Canvas ─────────────────────────────────────────────────── */
+.canvas-area{flex:1;display:flex;overflow:hidden;background:#f0f2f5}
+
+/* ── Tree panel ───────────────────────────────────────────────── */
+.tree-panel{
+  background:#ffffff;border-right:none;
+  display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;
+}
+.tree-scroll{position:relative;flex:1;overflow-y:auto;padding:6px}
+.tree-empty{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;gap:10px;color:#94a3b8;font-size:11px;text-align:center;padding:20px;
+}
+.tree-empty i{font-size:28px;opacity:0.35}
+.tree-node{position:relative;margin:1px 0}
+.tree-node-row{
+  display:flex;align-items:center;padding:4px 6px;border-radius:5px;
+  cursor:pointer;border:1px solid transparent;transition:all 0.1s;gap:4px;
+}
+.tree-node-row:hover{background:#f1f5f9;border-color:#e2e8f0}
+.tree-node-row.selected{
+  background:#eff6ff;border-color:#bfdbfe;
+  box-shadow:inset 2px 0 0 #6366f1;
+}
+.tree-node-children{padding-left:14px;border-left:1.5px dashed #e2e8f0;margin-left:9px;padding-top:2px;padding-bottom:12px}
+.tree-node-type{
+  font-size:10px;font-weight:600;color:#475569;
+  font-family:'JetBrains Mono',monospace;flex:1;min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.tree-node-row.selected .tree-node-type{color:#4f46e5}
+.tree-node-preview{
+  font-size:9px;color:#94a3b8;font-style:italic;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  margin-left:18px;padding:0 0 3px;
+}
+.tree-node-icon{font-size:10px;color:#a5b4fc;width:14px;text-align:center;flex-shrink:0}
+.tree-node-row.selected .tree-node-icon{color:#6366f1}
+.node-classes{display:flex;gap:2px;flex-wrap:nowrap;overflow:hidden}
+.node-class-tag{
+  font-size:8px;color:#6366f1;background:#ede9fe;
+  border:1px solid #c4b5fd;border-radius:3px;padding:0 4px;
+  font-family:'JetBrains Mono',monospace;white-space:nowrap;
+  max-width:50px;overflow:hidden;text-overflow:ellipsis;
+}
+.tree-node-delete{
+  opacity:0;font-size:10px;color:#94a3b8;border:none;
+  background:transparent;cursor:pointer;padding:1px 4px;
+  border-radius:3px;transition:all 0.1s;flex-shrink:0;
+}
+.tree-node-row:hover .tree-node-delete{opacity:1}
+.tree-node-delete:hover{color:#ef4444;background:#fee2e2}
+
+/* Drag zone */
+.drop-zone{min-height:28px;border-radius:5px;transition:all 0.12s}
+.sortable-ghost{opacity:0.35;background:#ede9fe !important;border:1px dashed #6366f1 !important}
+.sortable-drag{opacity:0.9;box-shadow:0 4px 20px rgba(0,0,0,0.15)}
+
+/* ── Preview panel ────────────────────────────────────────────── */
+.preview-panel{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.preview-toolbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:6px 14px;background:#ffffff;border-bottom:1px solid #e2e8f0;
+  font-size:11px;color:#64748b;flex-shrink:0;
+}
+.preview-frame-wrap{
+  flex:1;overflow:auto;display:flex;align-items:flex-start;justify-content:center;
+  padding:20px;background:#f0f2f5;
+  background-image:radial-gradient(circle,#cbd5e130 1px,transparent 1px);
+  background-size:22px 22px;
+  position:relative;
+}
+.preview-device{
+  border-radius:6px;overflow:hidden;
+  box-shadow:0 4px 24px rgba(0,0,0,0.12),0 0 0 1px #e2e8f0;
+  transition:width 0.3s cubic-bezier(0.4,0,0.2,1);
+  background:#fff;
+}
+.preview-device.full-width{width:100% !important;border-radius:4px}
+.preview-frame{width:100%;min-height:500px;border:none;display:block}
+.preview-label{font-size:10px;color:#94a3b8;text-align:center;margin-top:8px;font-family:'JetBrains Mono',monospace}
+.guide-overlay{pointer-events:none;position:absolute;inset:0;z-index:5}
+.guide-line-h{position:absolute;left:0;right:0;height:1px;background:rgba(99,102,241,0.35)}
+.guide-line-v{position:absolute;top:0;bottom:0;width:1px;background:rgba(99,102,241,0.35)}
+
+/* ── Code view ────────────────────────────────────────────────── */
+.code-view{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#ffffff}
+.code-toolbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 14px;background:#fafbfc;border-bottom:1px solid #e2e8f0;flex-shrink:0;
+}
+.code-content{flex:1;overflow:auto}
+.code-content pre{
+  margin:0;padding:16px;font-family:'JetBrains Mono',monospace;
+  font-size:11px;line-height:1.75;color:#22c55e;min-height:100%;
+  background:#0f172a;
+}
+
+/* ── Right sidebar (inspector) ────────────────────────────────── */
+.sidebar-right{
+  width:300px;background:#ffffff;border-left:1px solid #e2e8f0;
+  display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;
+}
+.inspector-tabs{display:flex;border-bottom:1px solid #e2e8f0;flex-shrink:0;background:#fafbfc}
+.inspector-tab{
+  flex:1;padding:9px 4px;font-size:9px;font-weight:800;
+  text-transform:uppercase;letter-spacing:0.8px;color:#94a3b8;
+  border:none;background:transparent;cursor:pointer;
+  border-bottom:2px solid transparent;transition:all 0.12s;margin-bottom:-1px;
+}
+.inspector-tab.active{color:#6366f1;border-bottom-color:#6366f1;background:#ffffff}
+.inspector-tab:hover:not(.active){color:#475569;border-bottom-color:#e2e8f0}
+.inspector-body{flex:1;overflow-y:auto;padding:12px}
+
+.inspector-empty{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;gap:10px;color:#94a3b8;text-align:center;padding:20px;
+}
+.inspector-empty i{font-size:32px;opacity:0.25}
+.inspector-empty strong{color:#64748b;display:block;margin-bottom:4px;font-size:12px}
+.inspector-empty p{font-size:11px;line-height:1.6;margin:0}
+
+/* Node inspector fieldsets */
+.node-header{display:flex;align-items:center;gap:9px;padding-bottom:10px;margin-bottom:12px;border-bottom:1px solid #f1f5f9}
+.node-header-icon{
+  width:34px;height:34px;border-radius:8px;
+  background:#ede9fe;border:1px solid #c4b5fd;
+  display:flex;align-items:center;justify-content:center;
+  color:#6366f1;font-size:15px;flex-shrink:0;
+}
+.node-header-type{font-size:12px;font-weight:700;color:#1e293b;font-family:'JetBrains Mono',monospace}
+.node-header-id{font-size:9px;color:#94a3b8;font-family:'JetBrains Mono',monospace}
+
+.field-label{
+  font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;
+  letter-spacing:0.7px;margin-bottom:4px;display:flex;align-items:center;gap:4px;
+}
+.field-input{
+  width:100%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;
+  padding:6px 9px;font-size:11px;color:#1e293b;
+  font-family:'JetBrains Mono',monospace;outline:none;transition:border-color 0.12s;
+}
+.field-input:focus{border-color:#6366f1;box-shadow:0 0 0 2px rgba(99,102,241,0.1);background:#fff}
+.field-textarea{min-height:76px;resize:vertical;line-height:1.5}
+.field-hint{font-size:9px;color:#94a3b8;margin-top:3px}
+
+.classes-box{
+  background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;
+  padding:9px;margin-bottom:10px;
+}
+.classes-box-title{
+  font-size:9px;font-weight:800;color:#64748b;text-transform:uppercase;
+  letter-spacing:0.7px;display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;
+}
+.class-badges{display:flex;flex-wrap:wrap;gap:4px;min-height:22px;margin-bottom:7px}
+.class-badge{
+  display:inline-flex;align-items:center;gap:3px;
+  padding:2px 8px;background:#ede9fe;border:1px solid #c4b5fd;
+  border-radius:100px;font-size:10px;font-weight:600;color:#6366f1;
+  font-family:'JetBrains Mono',monospace;
+}
+.class-badge-rm{
+  background:none;border:none;cursor:pointer;color:#a5b4fc;
+  font-size:9px;padding:0 0 0 2px;transition:color 0.1s;
+}
+.class-badge-rm:hover{color:#ef4444}
+.no-classes-msg{font-size:10px;color:#cbd5e1;font-style:italic}
+
+/* Inline class editor (expands below applied badge) */
+.inline-class-editor{
+  background:#faf5ff;border:1px solid #ddd6fe;
+  border-radius:8px;padding:8px 9px;margin-top:4px;
+  animation:slideDown 0.12s ease-out;
+}
+@keyframes slideDown{
+  from{opacity:0;transform:translateY(-4px)}
+  to{opacity:1;transform:translateY(0)}
+}
+.ice-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:6px;
+}
+.ice-title{
+  font-size:9px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:0.6px;
+  font-family:'JetBrains Mono',monospace;
+}
+.ice-close{
+  background:none;border:none;cursor:pointer;color:#a78bfa;font-size:10px;padding:0;
+  transition:color 0.1s;
+}
+.ice-close:hover{color:#7c3aed}
+.ice-empty{font-size:10px;color:#a78bfa;font-style:italic;padding:2px 0 4px}
+.class-badge.ice-active{
+  background:#ede9fe;border-color:#7c3aed;color:#6d28d9;
+  box-shadow:0 0 0 2px rgba(124,58,237,0.15);
+}
+
+.field-select{
+  width:100%;appearance:none;
+  background:#f8fafc url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 8px center;
+  border:1px solid #e2e8f0;border-radius:6px;
+  padding:6px 26px 6px 9px;font-size:11px;color:#475569;font-family:'JetBrains Mono',monospace;
+  outline:none;cursor:pointer;transition:border-color 0.12s;
+}
+.field-select:focus{border-color:#6366f1}
+.field-select:disabled{opacity:0.4;cursor:not-allowed}
+
+.resp-lbl{width:68px;font-size:10px;color:#64748b;display:flex;align-items:center;gap:4px;flex-shrink:0}
+
+.attrs-box{margin-top:10px}
+.attrs-title{font-size:9px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:0.7px;margin-bottom:6px}
+.attr-row{display:flex;align-items:center;gap:5px;margin-bottom:5px}
+.attr-key{font-size:10px;font-family:'JetBrains Mono',monospace;color:#64748b;width:88px;flex-shrink:0}
+
+/* ── Global Classes sidebar ───────────────────────────────────── */
+.gc-header{padding:10px 12px;background:#fafbfc;border-bottom:1px solid #e2e8f0;flex-shrink:0}
+.gc-title{font-size:11px;font-weight:700;color:#334155;margin-bottom:2px}
+.gc-subtitle{font-size:10px;color:#94a3b8;line-height:1.5}
+.gc-create{padding:8px;border-bottom:1px solid #e2e8f0;flex-shrink:0;display:flex;gap:5px}
+.gc-list{flex:1;overflow-y:auto;padding:6px}
+.gc-empty{text-align:center;padding:30px 10px;color:#94a3b8;font-size:11px}
+
+.cls-card{
+  background:#fff;border:1px solid #e2e8f0;border-radius:8px;
+  margin-bottom:6px;overflow:hidden;transition:border-color 0.12s;
+}
+.cls-card:hover{border-color:#c4b5fd}
+.cls-card-hdr{
+  display:flex;align-items:center;padding:7px 10px;cursor:pointer;
+  background:#fafbfc;gap:7px;transition:background 0.1s;
+}
+.cls-card-hdr:hover{background:#f1f5f9}
+.cls-card-name{
+  font-size:11px;font-weight:700;color:#6366f1;
+  font-family:'JetBrains Mono',monospace;flex:1;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;
+}
+.cls-card-body{padding:8px;background:#fafbfc}
+
+.prop-row{display:flex;align-items:center;gap:3px;margin-bottom:3px}
+.prop-key{
+  font-family:'JetBrains Mono',monospace;font-size:9px;color:#64748b;
+  background:#f1f5f9;border:1px solid #e2e8f0;border-radius:4px;
+  padding:3px 5px;width:115px;flex-shrink:0;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;
+}
+.prop-val{
+  flex:1;min-width:0;background:#fff;border:1px solid #e2e8f0;border-radius:4px;
+  padding:3px 5px;font-size:10px;color:#1e293b;font-family:'JetBrains Mono',monospace;
+  outline:none;transition:border-color 0.1s;overflow:hidden;
+}
+.prop-val:focus{border-color:#6366f1}
+/* Narrower prop-key inside the inline class editor to fit the tighter sidebar */
+.inline-class-editor .prop-key{width:80px}
+.prop-del{
+  border:none;background:none;color:#cbd5e1;cursor:pointer;
+  padding:2px;font-size:9px;transition:color 0.1s;flex-shrink:0;
+}
+.prop-del:hover{color:#ef4444}
+.add-prop-row{display:flex;gap:3px;margin-top:5px;padding-top:5px;border-top:1px solid #e2e8f0}
+/* Color swatch + picker */
+.color-swatch-wrap{position:relative;display:flex;align-items:center;cursor:pointer;flex-shrink:0}
+.color-swatch{width:14px;height:14px;border-radius:3px;border:1px solid #cbd5e1;display:block;flex-shrink:0}
+.color-swatch-wrap input[type=color]{opacity:0;position:absolute;right:220px;width:1px;height:1px;pointer-events:none;border:none;padding:0}
+.add-prop-sel{
+  flex:1;min-width:0;appearance:none;background:#f8fafc;border:1px solid #e2e8f0;
+  border-radius:4px;padding:4px;font-size:9px;color:#475569;
+  font-family:'JetBrains Mono',monospace;outline:none;cursor:pointer;
+}
+.add-prop-inp{
+  flex:1;min-width:0;background:#f8fafc;border:1px solid #e2e8f0;
+  border-radius:4px;padding:4px;font-size:9px;font-family:'JetBrains Mono',monospace;
+  outline:none;color:#1e293b;
+}
+.add-prop-btn{
+  border:none;background:#e2e8f0;color:#475569;cursor:pointer;
+  padding:4px 7px;border-radius:4px;font-size:9px;transition:all 0.12s;
+}
+.add-prop-btn:hover{background:#c4b5fd;color:#4f46e5}
+.dark-toggle{
+  display:flex;align-items:center;gap:5px;margin-top:7px;padding-top:7px;
+  border-top:1px solid #e2e8f0;cursor:pointer;font-size:10px;color:#64748b;
+  user-select:none;
+}
+.dark-toggle input{accent-color:#6366f1}
+.dark-section{margin-top:5px;padding-left:10px;border-left:2px solid #c4b5fd}
+.dark-section .prop-val{background:#faf5ff;border-color:#ddd6fe;color:#6d28d9}
+.dark-section .prop-val:focus{border-color:#8b5cf6}
+.dark-section .add-prop-sel,.dark-section .add-prop-inp{background:#faf5ff;border-color:#ddd6fe}
+
+/* ── Modals ───────────────────────────────────────────────────── */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(15,23,42,0.45);
+  backdrop-filter:blur(4px);z-index:1000;
+  display:flex;align-items:center;justify-content:center;padding:16px;
+}
+.modal-box{
+  background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;
+  box-shadow:0 16px 48px rgba(0,0,0,0.15);
+  width:100%;max-width:820px;max-height:90vh;
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.modal-sm{max-width:580px}
+.modal-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px;border-bottom:1px solid #e2e8f0;flex-shrink:0;
+}
+.modal-hdr-title{font-size:14px;font-weight:700;color:#1e293b;display:flex;align-items:center;gap:7px}
+.modal-bdy{flex:1;overflow:auto;display:flex;flex-direction:column}
+.modal-tabs{display:flex;border-bottom:1px solid #e2e8f0;padding:0 14px;background:#fafbfc;flex-shrink:0}
+.modal-tab{
+  padding:8px 14px;font-size:11px;font-weight:600;color:#64748b;
+  border:none;background:transparent;cursor:pointer;
+  border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.12s;
+}
+.modal-tab.active{color:#6366f1;border-bottom-color:#6366f1}
+.modal-preview-area{flex:1;overflow:auto;display:flex;justify-content:center;padding:16px;background:#f0f2f5}
+.modal-code textarea{
+  width:100%;min-height:400px;background:#0f172a;border:none;
+  padding:14px;font-family:'JetBrains Mono',monospace;font-size:11px;
+  line-height:1.7;color:#22c55e;resize:none;outline:none;
+}
+.modal-ftr{
+  display:flex;align-items:center;justify-content:flex-end;gap:8px;
+  padding:12px 18px;border-top:1px solid #e2e8f0;flex-shrink:0;background:#fafbfc;
+}
+.import-textarea{
+  width:100%;background:#0f172a;border:none;padding:14px;
+  font-family:'JetBrains Mono',monospace;font-size:11px;
+  line-height:1.7;color:#22c55e;min-height:240px;resize:vertical;outline:none;
+}
+.import-error{
+  color:#ef4444;font-size:11px;padding:6px 14px;
+  background:#fee2e2;border-top:1px solid #fecaca;
+  display:flex;align-items:center;gap:5px;
+}
+
+/* ── IO dropdown ──────────────────────────────────────────────── */
+.io-wrap{position:relative}
+.io-dropdown{
+  position:absolute;right:0;top:calc(100% + 4px);
+  background:#fff;border:1px solid #e2e8f0;border-radius:10px;
+  min-width:190px;z-index:300;box-shadow:0 8px 24px rgba(0,0,0,0.1);overflow:hidden;
+}
+.io-lbl{
+  padding:5px 12px;font-size:9px;font-weight:700;color:#94a3b8;
+  text-transform:uppercase;letter-spacing:0.8px;background:#fafbfc;border-bottom:1px solid #e2e8f0;
+}
+.io-item{
+  display:flex;align-items:center;gap:9px;padding:8px 14px;
+  font-size:12px;font-weight:500;color:#475569;border:none;
+  background:transparent;width:100%;text-align:left;cursor:pointer;transition:all 0.1s;
+}
+.io-item:hover{background:#f1f5f9;color:#1e293b}
+.io-item i{width:14px;text-align:center}
+
+/* Drop hints */
+.drop-hint-list {
+  padding: 12px 8px;
+  background: #f8fafc22;
+  border: 1px dashed #e2e8f0;
+  border-radius: 6px;
+  text-align: center;
+  margin: 4px;
+}
+.drop-hint-list.persistent-hint {
+  padding: 6px 4px; border-style: dotted; margin-top: 10px; opacity: 0.7; transition: opacity 0.2s;
+}
+.drop-hint-list.persistent-hint:hover { opacity: 1; }
+.drop-hint-list.persistent-hint .drop-hint-title { margin-bottom: 4px; }
+.drop-hint-title {
+  font-size: 9px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+.drop-hint-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+}
+.drop-hint-btn {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 3px 7px;
+  font-size: 10px;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+.drop-hint-btn:hover {
+  border-color: #6366f1;
+  color: #6366f1;
+  background: #f5f3ff;
+}
+
+/* Floating FAB for preview selection */
+.selection-action-bar{
+  position:absolute;z-index:1000;pointer-events:none;
+  transition:all 0.1s ease-out;
+}
+.preview-fab{
+  background:#6366f1;color:#fff;border:none;
+  border-radius:20px;padding:6px 14px;font-size:11px;font-weight:700;
+  cursor:pointer;box-shadow:0 6px 16px rgba(99,102,241,0.4);
+  display:flex;align-items:center;gap:6px;pointer-events:auto;
+  transform:translate(-50%, -100%) translateY(-15px);
+  white-space:nowrap;
+}
+.preview-fab:hover{background:#4f46e5;transform:translate(-50%, -100%) translateY(-17px)}
+.preview-fab i{font-size:10px}
+
+/* ── Toast ────────────────────────────────────────────────────── */
+.toast-msg{
+  position:fixed;bottom:20px;left:50%;
+  transform:translateX(-50%) translateY(50px);
+  background:#1e293b;color:#f1f5f9;padding:9px 18px;border-radius:8px;
+  font-size:12px;font-weight:500;z-index:2000;
+  transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);
+  box-shadow:0 4px 16px rgba(0,0,0,0.2);
+}
+.toast-msg.show{transform:translateX(-50%) translateY(0)}
+.toast-msg.ok{background:#166534;color:#dcfce7}
+
+/* ── Email settings panel ─────────────────────────────────────── */
+.email-settings{
+  padding:9px 12px;border-bottom:1px solid #e2e8f0;background:#fafbfc;flex-shrink:0;
+}
+.email-settings-row{display:flex;align-items:center;gap:6px}
+.email-settings label{font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.6px;white-space:nowrap}
+
+/* ── Rich text editor ─────────────────────────────────────────── */
+.rte-wrap{position:relative;margin-bottom:8px}
+.rte-bar{
+  display:flex;gap:2px;padding:4px;background:#f1f5f9;
+  border:1px solid #e2e8f0;border-bottom:none;
+  border-radius:6px 6px 0 0;flex-wrap:wrap;
+}
+.rte-btn{
+  border:none;background:transparent;color:#475569;
+  padding:3px 7px;border-radius:4px;font-size:11px;
+  cursor:pointer;transition:all 0.1s;line-height:1.4;
+}
+.rte-btn:hover{background:#e2e8f0;color:#1e293b}
+.rte-btn.active{background:#e0e7ff;color:#6366f1}
+.rte-vd{width:1px;background:#e2e8f0;margin:2px 3px;align-self:stretch}
+.rte-editor{
+  min-height:80px;max-height:180px;overflow-y:auto;
+  border:1px solid #e2e8f0;border-radius:0 0 6px 6px;
+  padding:8px 10px;font-size:12px;line-height:1.6;
+  color:#1e293b;background:#fff;outline:none;
+  font-family:'Inter',sans-serif;
+}
+.rte-editor:focus{border-color:#6366f1;box-shadow:0 0 0 2px rgba(99,102,241,0.08)}
+.rte-editor a{color:#6366f1;text-decoration:underline}
+/* Link popup */
+.link-popup{
+  position:relative;background:#fff;border:1px solid #e2e8f0;
+  border-radius:8px;padding:10px;margin-top:6px;
+  box-shadow:0 4px 16px rgba(0,0,0,0.08);
+}
+.link-popup-title{font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.7px;margin-bottom:6px}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── HEADER ──────────────────────────────────────────────── -->
+  <header class="app-header">
+    <div class="logo">
+      <div class="logo-icon"><i class="fa-solid fa-envelope-open-text"></i></div>
+      <span class="logo-name">MailArchitect</span>
+      <span class="logo-badge">MJML</span>
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+
+      <!-- Device -->
+      <div class="tool-group">
+        <button class="tool-btn" :class="{active:deviceWidth==='100%'}" @click="setDevice('100%')" title="Desktop (full width)">
+          <i class="fa-solid fa-desktop"></i>
+        </button>
+        <button class="tool-btn" :class="{active:deviceWidth==='768px'}" @click="setDevice('768px')" title="Tablet 768px">
+          <i class="fa-solid fa-tablet-screen-button"></i>
+        </button>
+        <button class="tool-btn" :class="{active:deviceWidth==='414px'}" @click="setDevice('414px')" title="Mobile L 414px">
+          <i class="fa-solid fa-mobile-screen-button"></i>
+        </button>
+        <button class="tool-btn" :class="{active:deviceWidth==='375px'}" @click="setDevice('375px')" title="Mobile S 375px">
+          <i class="fa-solid fa-mobile"></i>
+        </button>
+      </div>
+
+      <div class="vd"></div>
+
+      <div class="tool-group">
+        <button class="tool-btn" @click="promptNewEmail" title="Start New Email">
+          <i class="fa-regular fa-file"></i>
+        </button>
+        <button class="tool-btn" @click="undo" :class="{'opacity-50':!canUndo}" :disabled="!canUndo" title="Undo">
+          <i class="fa-solid fa-rotate-left"></i>
+        </button>
+        <button class="tool-btn" @click="redo" :class="{'opacity-50':!canRedo}" :disabled="!canRedo" title="Redo">
+          <i class="fa-solid fa-rotate-right"></i>
+        </button>
+      </div>
+
+      <div class="vd"></div>
+
+      <!-- View mode -->
+      <div class="tool-group">
+        <button class="tool-btn" :class="{active:viewMode==='builder'}" @click="viewMode='builder'">
+          <i class="fa-solid fa-layer-group me-1"></i>Builder
+        </button>
+        <button class="tool-btn" :class="{active:viewMode==='code'}" @click="viewMode='code'">
+          <i class="fa-solid fa-code me-1"></i>MJML
+        </button>
+      </div>
+
+      <div class="vd"></div>
+
+      <button class="btn-outline-sm" :class="{'active-guide':showGuides}" @click="showGuides=!showGuides">
+        <i class="fa-solid fa-ruler-combined"></i> Guides
+      </button>
+
+      <!-- Import / Export -->
+      <div class="io-wrap" id="io-wrap">
+        <button class="btn-outline-sm" @click="ioMenuOpen=!ioMenuOpen">
+          <i class="fa-solid fa-arrows-up-down"></i> I/O
+          <i class="fa-solid fa-chevron-down ms-1" style="font-size:9px;opacity:0.6"></i>
+        </button>
+        <div class="io-dropdown" v-show="ioMenuOpen" @click.stop>
+          <div class="io-lbl">Import</div>
+          <button class="io-item" @click="triggerImport">
+            <i class="fa-solid fa-file-arrow-up" style="color:#22c55e"></i> From MJML file
+          </button>
+          <button class="io-item" @click="openImportModal">
+            <i class="fa-solid fa-paste" style="color:#22c55e"></i> Paste MJML…
+          </button>
+          <div class="io-lbl" style="border-top:1px solid #e2e8f0">Export</div>
+          <button class="io-item" @click="exportMjml">
+            <i class="fa-solid fa-file-arrow-down" style="color:#818cf8"></i> Export MJML file
+          </button>
+        </div>
+      </div>
+
+      <input type="file" ref="importFileInput" accept=".mjml,text/xml,application/xml" style="display:none" @change="handleFileImport">
+
+      <button class="btn-export" @click="openExport">
+        <i class="fa-solid fa-file-export"></i> Export HTML
+      </button>
+    </div>
+  </header>
+
+  <!-- ── MAIN ────────────────────────────────────────────────── -->
+  <div class="app-body">
+
+    <!-- Components palette -->
+    <aside class="sidebar-left" v-show="viewMode==='builder'" :style="{width: leftW+'px'}">
+      <div class="sidebar-title">Components</div>
+      <draggable
+        class="comp-grid"
+        :list="componentLibrary"
+        :group="{name:'mjml',pull:'clone',put:false}"
+        :clone="cloneNode"
+        item-key="type"
+        :sort="false"
+        ghost-class="sortable-ghost"
+        drag-class="sortable-drag"
+      >
+        <template #item="{element}">
+          <div class="comp-item" :data-type="element.type" :title="element.desc">
+            <div class="comp-item-icon"><i :class="element.icon"></i></div>
+            <div class="comp-item-content">
+              <span class="comp-item-name">{{element.name}}</span>
+            </div>
+          </div>
+        </template>
+      </draggable>
+      <div class="comp-tip"><i class="fa-solid fa-grip-lines-vertical me-1" style="opacity:0.4"></i>Drag to add</div>
+    </aside>
+    <!-- Left resize handle -->
+    <div class="resize-handle" v-show="viewMode==='builder'" id="rh-left"
+         @pointerdown="startResize($event,'left')"
+         title="Drag to resize"></div>
+
+    <!-- Canvas -->
+    <main class="canvas-area">
+
+      <!-- ── BUILDER MODE ──────────────────────────────────────── -->
+      <template v-if="viewMode==='builder'">
+
+        <!-- Structure tree -->
+        <div class="tree-panel" :style="{width: treeW+'px'}">
+          <div class="sidebar-title d-flex justify-content-between align-items-center pe-2">
+            <span>Document Structure</span>
+            <button @click="clearDoc" class="btn-outline-sm p-0 px-1" style="color:#ef4444;border-color:#fecaca;font-size:10px" title="Clear">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+          <div class="tree-scroll" id="tree-scroll">
+            <draggable
+              :list="tree"
+              :group="{
+                name: 'mjml',
+                put: false
+              }"
+              item-key="id"
+              ghost-class="sortable-ghost"
+              drag-class="sortable-drag"
+              class="drop-zone"
+              style="min-height:100%"
+            >
+              <template #item="{element}">
+                <tree-node
+                  :node="element"
+                  :selected-id="selectedId"
+                  @select="selectNode"
+                  @delete="deleteNode"
+                  @hover="setHoverNode"
+                ></tree-node>
+              </template>
+            </draggable>
+          </div>
+        </div>
+        <!-- Tree resize handle -->
+        <div class="resize-handle" id="rh-tree"
+             @pointerdown="startResize($event,'tree')"
+             title="Drag to resize"></div>
+
+        <!-- Live preview -->
+        <div class="preview-panel">
+          <div class="preview-toolbar">
+            <span class="d-flex align-items-center gap-2">
+              <i class="fa-solid fa-eye" style="color:#a5b4fc"></i>
+              <span style="font-weight:600;color:#334155">Live Preview</span>
+              <span class="badge bg-light text-secondary border" style="font-size:9px;font-weight:600">{{deviceLabel}}</span>
+            </span>
+            <div class="d-flex align-items-center gap-3">
+              <span v-if="compileError" class="badge" style="background:#fee2e2;color:#ef4444;font-size:9px;height:max-content;">
+                <i class="fa-solid fa-circle-exclamation me-1"></i>Error
+              </span>
+              <span v-else class="badge" style="background:#dcfce7;color:#16a34a;font-size:9px;height:max-content;">
+                <i class="fa-solid fa-circle-check me-1"></i>Valid
+              </span>
+              <div class="d-flex align-items-center gap-1" style="background:#f1f5f9;padding:2px;border-radius:6px">
+                <button class="tool-btn" :class="{'active active-sun':previewTheme==='light'}" @click="setTheme('light')" title="Light Preview"><i class="fa-solid fa-sun"></i></button>
+                <button class="tool-btn" :class="{'active active-moon':previewTheme==='dark'}" @click="setTheme('dark')" title="Dark Preview"><i class="fa-solid fa-moon"></i></button>
+              </div>
+            </div>
+          </div>
+          <div class="preview-frame-wrap" ref="previewWrap">
+            <!-- Guidelines overlay -->
+            <div class="guide-overlay" v-if="showGuides">
+              <div class="guide-line-h" style="top:50%"></div>
+              <div class="guide-line-v" style="left:50%"></div>
+              <div class="guide-line-v" style="left:33.33%"></div>
+              <div class="guide-line-v" style="left:66.66%"></div>
+            </div>
+            <div style="width:100%">
+              <div class="preview-device" :class="deviceWidth==='100%'?'full-width':''" :style="deviceWidth!=='100%'?{width:deviceWidth,margin:'0 auto'}:{}">
+                <iframe ref="previewFrame" class="preview-frame" :style="{height:previewHeight+'px'}"></iframe>
+                
+                <!-- Floating link button -->
+                <div v-if="prevSel.show" class="selection-action-bar" :style="{left:prevSel.x+'px', top:prevSel.y+'px'}">
+                  <button class="preview-fab" @click="openLinkFromPreview">
+                    <i class="fa-solid fa-link"></i> Add Link
+                  </button>
+                </div>
+              </div>
+              <div class="preview-label">{{deviceLabel}}</div>
+            </div>
+          </div>
+        </div>
+
+      </template>
+
+      <!-- ── CODE MODE ───────────────────────────────────────── -->
+      <div class="code-view" v-else>
+        <div class="code-toolbar">
+          <span style="font-size:11px;color:#475569;font-weight:700;display:flex;align-items:center;gap:6px">
+            <i class="fa-solid fa-code" style="color:#6366f1"></i> Generated MJML
+          </span>
+          <button class="btn-outline-sm" @click="copyCode"><i class="fa-regular fa-copy"></i> Copy</button>
+        </div>
+        <div class="code-content">
+          <pre>{{cleanMjmlSource}}</pre>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- ── RIGHT INSPECTOR ──────────────────────────────────── -->
+    <aside class="sidebar-right">
+      <div class="inspector-tabs">
+        <button class="inspector-tab" :class="{active:tab==='node'}" @click="tab='node'">Selection</button>
+        <button class="inspector-tab" :class="{active:tab==='classes'}" @click="tab='classes'">Classes</button>
+      </div>
+
+      <!-- SELECTION TAB -->
+      <template v-if="tab==='node'">
+        <div class="inspector-body" v-if="selectedNode">
+
+          <div class="node-header">
+            <div class="node-header-icon"><i :class="iconFor(selectedNode.type)"></i></div>
+            <div>
+              <div class="node-header-type">&lt;{{selectedNode.type}}&gt;</div>
+              <div class="node-header-id">{{selectedNode.id}}</div>
+            </div>
+          </div>
+
+          <!-- Rich text editor for content nodes -->
+          <div class="rte-wrap" v-if="nodeHasContent(selectedNode.type)">
+            <div class="rte-bar">
+              <span class="rte-btn" @mousedown.prevent="execFmt('bold')" title="Bold"><b>B</b></span>
+              <span class="rte-btn" @mousedown.prevent="execFmt('italic')" title="Italic"><i>I</i></span>
+              <span class="rte-btn" @mousedown.prevent="execFmt('underline')" title="Underline"><u>U</u></span>
+              <div class="rte-vd"></div>
+              <span class="rte-btn" @mousedown.prevent="startLink" title="Add / edit link">
+                <i class="fa-solid fa-link" style="font-size:10px"></i> Link
+              </span>
+              <span class="rte-btn" @mousedown.prevent="removeLink" title="Remove link">
+                <i class="fa-solid fa-link-slash" style="font-size:10px"></i>
+              </span>
+              <div class="rte-vd"></div>
+              <span class="rte-btn" @mousedown.prevent="showRawHtml = !showRawHtml" :title="showRawHtml ? 'Use Rich Text' : 'Edit Source HTML'" :class="{'ice-active': showRawHtml}">
+                <i class="fa-solid fa-code" style="font-size:10px;color:#6366f1"></i>
+                <span class="ms-1" style="font-size:9.5px;font-family:'JetBrains Mono',monospace">{{showRawHtml ? 'Rich Text' : 'HTML'}}</span>
+              </span>
+              <div style="flex:1"></div>
+              <span class="rte-btn" style="font-size:10px;color:#94a3b8;flex-shrink:0" :title="'Node: '+selectedNode.type">
+                {{selectedNode.type}}
+              </span>
+            </div>
+            <textarea
+                 v-if="showRawHtml"
+                 class="rte-editor"
+                 v-model="selectedNode.content"
+                 @input="scheduleRender"
+                 style="font-family:'JetBrains Mono',monospace;white-space:pre-wrap;width:100%;border:none;resize:vertical;"
+                 placeholder="<div>Raw HTML code...</div>"
+            ></textarea>
+            <div v-else
+                 class="rte-editor"
+                 ref="rteEl"
+                 contenteditable="true"
+                 @input="onRteInput"
+                 @click="onRteClick"
+                 @keydown.enter.exact.prevent="insertRteBr"
+            ></div>
+            <!-- Link insertion popup -->
+            <div class="link-popup" v-if="linkPop.show">
+              <div class="link-popup-title"><i class="fa-solid fa-link me-1" style="color:#6366f1"></i>{{linkPop.editNode ? 'Edit Link' : 'Insert Link'}}</div>
+              <input class="field-input mb-1" v-model="linkPop.url" placeholder="https://..." @keyup.enter="applyLink">
+              
+              <div class="d-flex gap-2 mb-2">
+                <div style="flex:1">
+                  <div class="field-label mt-1">Class</div>
+                  <select class="field-select" v-model="linkPop.cls">
+                    <option value="">None</option>
+                    <option v-for="c in classes" :key="c.name" :value="c.name">{{c.name}}</option>
+                  </select>
+                </div>
+                <div style="flex:1">
+                  <div class="field-label mt-1">Target</div>
+                  <select class="field-select" v-model="linkPop.target">
+                    <option value="">Default</option>
+                    <option value="_blank">_blank</option>
+                    <option value="_parent">_parent</option>
+                    <option value="_top">_top</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="d-flex gap-2">
+                <button class="btn-export" style="flex:1;padding:5px 8px;font-size:11px" @click="applyLink">Apply</button>
+                <button class="btn-outline-sm" v-if="linkPop.editNode" @click="removeLinkFromPopup" style="color:#ef4444;border-color:#fecaca" title="Remove Link">
+                  <i class="fa-solid fa-unlink"></i>
+                </button>
+                <button class="btn-outline-sm" @click="linkPop.show=false">Cancel</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- MJML Classes -->
+          <div class="classes-box">
+            <div class="classes-box-title">
+              <span><i class="fa-solid fa-tags me-1" style="color:#6366f1"></i>MJML Classes</span>
+              <span class="badge" style="background:#ede9fe;color:#6366f1;font-size:9px;font-family:'JetBrains Mono',monospace">{{(selectedNode.classes||[]).length}}</span>
+            </div>
+            <div class="class-badges">
+              <template v-for="c in (selectedNode.classes||[])" :key="c">
+                <span class="class-badge" :class="{'ice-active': inlineEditClass===c}">
+                  <span @click="toggleInlineEdit(c)" style="cursor:pointer" :title="inlineEditClass===c ? 'Close editor' : 'Click to edit CSS'">{{c}}</span>
+                  <button class="class-badge-rm" @click.stop="removeClass(c)"><i class="fa-solid fa-xmark"></i></button>
+                </span>
+                <!-- Inline class editor -->
+                <div class="inline-class-editor" v-if="inlineEditClass===c" style="width:100%">
+                  <div class="ice-header">
+                    <span class="ice-title"><i class="fa-solid fa-pen-to-square me-1"></i>.{{c}}</span>
+                    <button class="ice-close" @click="inlineEditClass=null" title="Close"><i class="fa-solid fa-xmark"></i></button>
+                  </div>
+                  <template v-if="getClassObj(c)">
+                    <div class="prop-row" v-for="(v,k) in getClassObj(c).props" :key="k">
+                      <div class="prop-key" :title="k">{{k}}</div>
+                      <label class="color-swatch-wrap" v-if="isColorProp(k)" :title="'Pick color for '+k">
+                        <span class="color-swatch" :style="{background:v||'transparent'}"></span>
+                        <input type="color" :value="colorToHex(v)" @input="getClassObj(c).props[k]=$event.target.value">
+                      </label>
+                      <input class="prop-val" :value="v" @input="getClassObj(c).props[k]=$event.target.value" placeholder="value">
+                      <button class="prop-del" @click="deleteProp(getClassObj(c),k)"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div class="ice-empty" v-if="!Object.keys(getClassObj(c).props).length">No properties yet.</div>
+                    <div class="add-prop-row">
+                      <select class="add-prop-sel" v-model="getClassObj(c)._pk" @change="if(getClassObj(c)._pk==='CUSTOM_PROP') { getClassObj(c)._pk=''; getClassObj(c)._showCustom=true; }">
+                        <option value="">+ Add Property…</option>
+                        <option v-for="p in propSuggestions" :key="p" :value="p">{{p}}</option>
+                        <option value="CUSTOM_PROP">Custom Property…</option>
+                      </select>
+                      <label class="color-swatch-wrap" v-if="isColorProp(getClassObj(c)._pk)" title="Pick color">
+                        <span class="color-swatch" :style="{background:getClassObj(c)._pv||'transparent'}"></span>
+                        <input type="color" :value="colorToHex(getClassObj(c)._pv)" @input="getClassObj(c)._pv=$event.target.value">
+                      </label>
+                      <input v-if="getClassObj(c)._pk" class="add-prop-inp" v-model="getClassObj(c)._pv" placeholder="value" @keyup.enter="addProp(getClassObj(c))">
+                      <button class="add-prop-btn" @click="addProp(getClassObj(c))" :disabled="!getClassObj(c)._pk"><i class="fa-solid fa-plus"></i></button>
+                    </div>
+                    <div class="add-prop-row mt-1" v-if="getClassObj(c)._showCustom">
+                      <input class="add-prop-inp" v-model="getClassObj(c)._pk" placeholder="property-name" style="flex:1">
+                      <input class="add-prop-inp" v-model="getClassObj(c)._pv" placeholder="value" @keyup.enter="addProp(getClassObj(c)); getClassObj(c)._showCustom=false" style="flex:1">
+                      <button class="add-prop-btn" @click="addProp(getClassObj(c)); getClassObj(c)._showCustom=false"><i class="fa-solid fa-plus"></i></button>
+                    </div>
+                    <label class="dark-toggle" title="Enable to provide CSS overrides used when dark mode is active"><input type="checkbox" v-model="getClassObj(c).dark"> Dark mode overrides</label>
+                    <div class="dark-section" v-if="getClassObj(c).dark">
+                      <div class="prop-row" v-for="(v,k) in (getClassObj(c).darkProps || {})" :key="k">
+                        <div class="prop-key" :title="k"><i class="fa-solid fa-moon me-1" style="color:#94a3b8"></i>{{k}}</div>
+                        <label class="color-swatch-wrap" v-if="isColorProp(k)">
+                          <span class="color-swatch" :style="{background:v||'transparent'}"></span>
+                          <input type="color" :value="colorToHex(v)" @input="if(!getClassObj(c).darkProps) getClassObj(c).darkProps={}; getClassObj(c).darkProps[k]=$event.target.value">
+                        </label>
+                        <input class="prop-val" :value="v" @input="if(!getClassObj(c).darkProps) getClassObj(c).darkProps={}; getClassObj(c).darkProps[k]=$event.target.value" placeholder="value">
+                        <button class="prop-del" @click="deleteDarkProp(getClassObj(c),k)"><i class="fa-solid fa-xmark"></i></button>
+                      </div>
+                      <div class="add-prop-row">
+                        <select class="add-prop-sel" v-model="getClassObj(c)._dpk">
+                          <option value="">+ Dark Prop…</option>
+                          <option v-for="p in propSuggestions" :key="p" :value="p">{{p}}</option>
+                        </select>
+                        <label class="color-swatch-wrap" v-if="isColorProp(getClassObj(c)._dpk)" title="Pick color">
+                          <span class="color-swatch" :style="{background:getClassObj(c)._dpv||'transparent'}"></span>
+                          <input type="color" :value="colorToHex(getClassObj(c)._dpv)" @input="getClassObj(c)._dpv=$event.target.value">
+                        </label>
+                        <input v-else class="add-prop-inp" v-model="getClassObj(c)._dpv" placeholder="value" @keyup.enter="addDarkProp(getClassObj(c))">
+                        <button class="add-prop-btn" @click="addDarkProp(getClassObj(c))" :disabled="!getClassObj(c)._dpk"><i class="fa-solid fa-plus"></i></button>
+                      </div>
+                    </div>
+                  </template>
+                  <div v-else class="ice-empty">Class definition not found.</div>
+                </div>
+              </template>
+              <span class="no-classes-msg" v-if="!(selectedNode.classes||[]).length">No classes applied</span>
+            </div>
+            <div class="mt-2" v-if="availableClasses.length > 0">
+              <div style="font-size:9px; color:#94a3b8; font-weight:600; margin-bottom:4px">Available Classes:</div>
+              <div class="class-badges">
+                <span class="class-badge" style="cursor:pointer; background:#f8fafc; border-color:#e2e8f0; color:#64748b" v-for="c in availableClasses" :key="c.name" @click="pendingClass=c.name; addClass()" title="Click to add">
+                  <i class="fa-solid fa-plus me-1" style="font-size:8px"></i>{{c.name}}
+                </span>
+              </div>
+            </div>
+            <div v-else class="text-xs mt-2" style="color:#94a3b8;font-size:10px">All global classes applied.</div>
+          </div>
+
+          <!-- Attrs (Content Only) -->
+          <div class="attrs-box" v-if="stdAttrs(selectedNode.type).length">
+            <div class="attrs-title"><i class="fa-solid fa-list-check me-1" style="color:#94a3b8"></i>Content & Data</div>
+            <div class="attr-row" v-for="attr in stdAttrs(selectedNode.type)" :key="attr.key">
+              <span class="attr-key">{{attr.key}}</span>
+              <input class="field-input" v-model="selectedNode.attrs[attr.key]" :placeholder="attr.placeholder||'value'">
+            </div>
+          </div>
+
+        </div>
+        <div class="inspector-empty" v-else>
+          <i class="fa-regular fa-hand-pointer"></i>
+          <p><strong>Nothing selected</strong>Click any node in the tree to inspect and style it via classes.</p>
+        </div>
+      </template>
+
+      <!-- CLASSES TAB -->
+      <template v-else>
+        <div class="gc-header">
+          <div class="gc-title"><i class="fa-solid fa-swatchbook me-1" style="color:#6366f1"></i>Global Class Definitions</div>
+          <div class="gc-subtitle">Define <code style="color:#6366f1;font-family:'JetBrains Mono',monospace">&lt;mj-class&gt;</code> tokens. No inline styles — classes only.</div>
+        </div>
+        <div class="gc-create">
+          <input class="field-input" style="flex:1" v-model="newClassName" placeholder="e.g. hero-bg" @keyup.enter="createClass">
+          <button class="btn-export" style="padding:6px 12px" @click="createClass"><i class="fa-solid fa-plus"></i></button>
+        </div>
+        <div class="gc-list">
+          <div class="cls-card" v-for="(cls,ci) in classes" :key="ci" :id="'cls-card-'+cls.name">
+            <div class="cls-card-hdr" @click="toggleClass(ci)">
+              <span class="cls-card-name">.{{cls.name}}</span>
+              <span class="badge me-1" style="background:#f1f5f9;color:#64748b;font-size:8px;font-weight:600">{{Object.keys(cls.props).length}} props</span>
+              <button class="btn-outline-sm py-0 px-1 me-1" style="font-size:9px;color:#ef4444;border-color:#fecaca" @click.stop="deleteClass(ci)">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+              <i class="fa-solid" :class="cls._open?'fa-chevron-up':'fa-chevron-down'" style="font-size:9px;color:#94a3b8"></i>
+            </div>
+            <div class="cls-card-body" v-show="cls._open">
+              <div class="prop-row" v-for="(v,k) in cls.props" :key="k">
+                <div class="prop-key" :title="k">{{k}}</div>
+                <label class="color-swatch-wrap" v-if="isColorProp(k)" :title="'Pick color for '+k">
+                  <span class="color-swatch" :style="{background:v||'transparent'}"></span>
+                  <input type="color" :value="colorToHex(v)" @input="cls.props[k]=$event.target.value">
+                </label>
+                <input class="prop-val" :value="v" @input="cls.props[k]=$event.target.value" placeholder="value">
+                <button class="prop-del" @click="deleteProp(cls,k)"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+              <div class="add-prop-row">
+                <select class="add-prop-sel" v-model="cls._pk" @change="if(cls._pk==='CUSTOM_PROP') { cls._pk=''; cls._showCustom=true; }">
+                  <option value="">+ Add Property…</option>
+                  <option v-for="p in propSuggestions" :key="p" :value="p">{{p}}</option>
+                  <option value="CUSTOM_PROP">Custom Property…</option>
+                </select>
+                <label class="color-swatch-wrap" v-if="isColorProp(cls._pk)" title="Pick color">
+                  <span class="color-swatch" :style="{background:cls._pv||'transparent'}"></span>
+                  <input type="color" :value="colorToHex(cls._pv)" @input="cls._pv=$event.target.value">
+                </label>
+                <input v-if="cls._pk" class="add-prop-inp" v-model="cls._pv" placeholder="value" @keyup.enter="addProp(cls)">
+                <button class="add-prop-btn" @click="addProp(cls)" :disabled="!cls._pk"><i class="fa-solid fa-plus"></i></button>
+              </div>
+              <div class="add-prop-row mt-1" v-if="cls._showCustom">
+                <input class="add-prop-inp" v-model="cls._pk" placeholder="property-name" style="flex:1">
+                <input class="add-prop-inp" v-model="cls._pv" placeholder="value" @keyup.enter="addProp(cls); cls._showCustom=false" style="flex:1">
+                <button class="add-prop-btn" @click="addProp(cls); cls._showCustom=false"><i class="fa-solid fa-plus"></i></button>
+              </div>
+
+              <label class="dark-toggle" title="Enable to provide CSS overrides used when dark mode is active"><input type="checkbox" v-model="cls.dark"> Dark mode overrides</label>
+              <div class="dark-section" v-if="cls.dark">
+                <div style="font-size:9px;color:#8B5CF6;margin-bottom:8px;line-height:1.4">Overrides apply when viewing the email in dark mode environments.</div>
+                <div class="prop-row" v-for="(v,k) in (cls.darkProps || {})" :key="k">
+                  <div class="prop-key" :title="k"><i class="fa-solid fa-moon me-1" style="color:#94a3b8"></i>{{k}}</div>
+                  <label class="color-swatch-wrap" v-if="isColorProp(k)">
+                    <span class="color-swatch" :style="{background:v||'transparent'}"></span>
+                    <input type="color" :value="colorToHex(v)" @input="if(!cls.darkProps) cls.darkProps={}; cls.darkProps[k]=$event.target.value; scheduleRender()">
+                  </label>
+                  <input class="prop-val" :value="v" @input="if(!cls.darkProps) cls.darkProps={}; cls.darkProps[k]=$event.target.value; scheduleRender()" placeholder="value">
+                  <button class="prop-del" @click="deleteDarkProp(cls,k); scheduleRender()"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="add-prop-row">
+                  <select class="add-prop-sel" v-model="cls._dpk" @change="if(cls._dpk==='CUSTOM_PROP') { cls._dpk=''; cls._showCustomDark=true; }">
+                    <option value="">+ Add Dark Prop…</option>
+                    <option v-for="p in propSuggestions" :key="p" :value="p">{{p}}</option>
+                    <option value="CUSTOM_PROP">Custom Property…</option>
+                  </select>
+                  <label class="color-swatch-wrap" v-if="isColorProp(cls._dpk)" title="Pick color">
+                    <span class="color-swatch" :style="{background:cls._dpv||'transparent'}"></span>
+                    <input type="color" :value="colorToHex(cls._dpv)" @input="cls._dpv=$event.target.value">
+                  </label>
+                  <input v-if="cls._dpk" class="add-prop-inp" v-model="cls._dpv" placeholder="value" @keyup.enter="addDarkProp(cls)">
+                  <button class="add-prop-btn" @click="addDarkProp(cls)" :disabled="!cls._dpk"><i class="fa-solid fa-plus"></i></button>
+                </div>
+                <div class="add-prop-row mt-1" v-if="cls._showCustomDark">
+                  <input class="add-prop-inp" v-model="cls._dpk" placeholder="property-name" style="flex:1">
+                  <input class="add-prop-inp" v-model="cls._dpv" placeholder="value" @keyup.enter="addDarkProp(cls); cls._showCustomDark=false" style="flex:1">
+                  <button class="add-prop-btn" @click="addDarkProp(cls); cls._showCustomDark=false"><i class="fa-solid fa-plus"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gc-empty" v-if="!classes.length">No classes yet. Create one above.</div>
+        </div>
+      </template>
+
+    </aside>
+  </div>
+
+  <!-- ── WELCOME MODAL ─────────────────────────────────────────── -->
+  <div class="modal-overlay" v-if="welcomeOpen" style="background:#0f172ab0">
+    <div class="modal-box modal-sm" style="max-width:450px;">
+      <div class="modal-hdr">
+        <div class="modal-hdr-title"><i class="fa-solid fa-envelope-open-text" style="color:#6366f1"></i>Welcome to MailArchitect</div>
+      </div>
+      <div style="padding:24px 20px 10px;font-size:12px;color:#475569;line-height:1.6;text-align:center">
+        <p v-if="hasSavedEmail">We found an autosaved email from a previous session.</p>
+        <p v-else>Start building a beautiful email or import an existing MJML file.</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;padding:0 24px 24px">
+        <button v-if="hasSavedEmail" class="btn-export" style="justify-content:center;padding:12px;font-size:13px" @click="welcomeContinue">
+          <i class="fa-solid fa-clock-rotate-left"></i> Continue Previous Email
+        </button>
+        <button class="btn-outline-sm" style="justify-content:center;padding:12px;background:#f8fafc;font-size:13px" @click="welcomeNewEmail">
+          <i class="fa-regular fa-file"></i> Start New Blank Email
+        </button>
+        <button class="btn-outline-sm" style="justify-content:center;padding:12px;background:#f8fafc;font-size:13px" @click="triggerWelcomeImport">
+          <i class="fa-solid fa-file-arrow-up"></i> Upload MJML File
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CONFIRM NEW MODAL ─────────────────────────────────────── -->
+  <div class="modal-overlay" v-if="confirmNewOpen" @click.self="confirmNewOpen=false">
+    <div class="modal-box modal-sm" style="max-width:400px;">
+      <div class="modal-hdr">
+        <div class="modal-hdr-title"><i class="fa-solid fa-triangle-exclamation" style="color:#eab308"></i>Warning</div>
+      </div>
+      <div style="padding:20px;font-size:12px;color:#475569;line-height:1.6;">
+        Starting a new email will <strong style="color:#ef4444">delete</strong> your previously started email from local storage. Are you sure you want to continue?
+      </div>
+      <div class="modal-ftr">
+        <button class="btn-outline-sm" @click="confirmNewOpen=false">Cancel</button>
+        <button class="btn-export" style="background:linear-gradient(135deg,#ef4444,#dc2626);" @click="executeNewEmail">
+          <i class="fa-solid fa-circle-check"></i> Yes, Start New
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── EXPORT MODAL ─────────────────────────────────────────── -->
+  <div class="modal-overlay" v-if="exportOpen" @click.self="exportOpen=false">
+    <div class="modal-box">
+      <div class="modal-hdr">
+        <div class="modal-hdr-title"><i class="fa-solid fa-file-code" style="color:#6366f1"></i>Export Email HTML</div>
+        <button class="btn-outline-sm py-0 px-2" @click="exportOpen=false"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-bdy">
+        <div class="modal-tabs">
+          <button class="modal-tab" :class="{active:exportTab==='light'}" @click="exportTab='light'">
+            <i class="fa-solid fa-sun me-1" style="color:#d97706"></i>Light Preview
+          </button>
+          <button class="modal-tab" :class="{active:exportTab==='dark'}" @click="exportTab='dark'">
+            <i class="fa-solid fa-moon me-1" style="color:#6366f1"></i>Dark Preview
+          </button>
+          <button class="modal-tab" :class="{active:exportTab==='code'}" @click="exportTab='code'">
+            <i class="fa-solid fa-code me-1" style="color:#22c55e"></i>HTML Source
+          </button>
+        </div>
+        <div class="modal-preview-area" v-if="exportTab!=='code'">
+          <iframe style="width:100%;max-width:650px;min-height:600px;border:none;border-radius:6px;box-shadow:0 4px 20px rgba(0,0,0,0.1)"
+                  :srcdoc="exportTab==='dark'?disableSystemDark(exportHtmlDark):disableSystemDark(exportHtml)"></iframe>
+        </div>
+        <div class="modal-code" v-else>
+          <textarea readonly :value="exportHtml"></textarea>
+        </div>
+      </div>
+      <div class="modal-ftr">
+        <button class="btn-outline-sm" @click="exportOpen=false">Close</button>
+        <button class="btn-outline-sm" @click="copyHtml"><i class="fa-regular fa-copy"></i> Copy HTML</button>
+        <button class="btn-export" @click="downloadHtml"><i class="fa-solid fa-download"></i> Download</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── IMPORT MODAL ─────────────────────────────────────────── -->
+  <div class="modal-overlay" v-if="importOpen" @click.self="importOpen=false">
+    <div class="modal-box modal-sm">
+      <div class="modal-hdr">
+        <div class="modal-hdr-title"><i class="fa-solid fa-file-arrow-up" style="color:#22c55e"></i>Import MJML</div>
+        <button class="btn-outline-sm py-0 px-2" @click="importOpen=false"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div style="padding:10px 16px;font-size:11px;color:#64748b;border-bottom:1px solid #e2e8f0">
+        Paste MJML or pick a file. <strong style="color:#d97706">Warning:</strong> replaces the current document.
+      </div>
+      <textarea class="import-textarea" v-model="importText" placeholder="<mjml>&#10;  <mj-head>...</mj-head>&#10;  <mj-body>...</mj-body>&#10;</mjml>"></textarea>
+      <div class="import-error" v-if="importErr"><i class="fa-solid fa-triangle-exclamation"></i>{{importErr}}</div>
+      <div class="modal-ftr">
+        <button class="btn-outline-sm me-auto" @click="triggerImport"><i class="fa-solid fa-folder-open"></i> Browse File…</button>
+        <button class="btn-outline-sm" @click="importOpen=false">Cancel</button>
+        <button class="btn-export" @click="applyImport" :disabled="!importText.trim()">
+          <i class="fa-solid fa-check"></i> Import
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TOAST ────────────────────────────────────────────────── -->
+  <div class="toast-msg" :class="{show:toastShow,ok:toastSuccess}">{{toastMsg}}</div>
+
+</div>
+
+<script>
+const { createApp, ref, reactive, computed, watch, onMounted, nextTick } = Vue;
+const Draggable = window.vuedraggable;
+
+// ── Helpers ──────────────────────────────────────────────────
+const uid = () => 'n' + Math.random().toString(36).substring(2, 9);
+
+const iconMap = {
+  'mj-body':'fa-solid fa-border-all','mj-section':'fa-regular fa-square-full',
+  'mj-column':'fa-solid fa-table-columns','mj-group':'fa-solid fa-object-group',
+  'mj-text':'fa-solid fa-font','mj-image':'fa-regular fa-image',
+  'mj-button':'fa-solid fa-arrow-pointer','mj-divider':'fa-solid fa-grip-lines',
+  'mj-spacer':'fa-solid fa-arrows-up-down','mj-social':'fa-solid fa-share-nodes',
+  'mj-social-element':'fa-brands fa-twitter','mj-wrapper':'fa-solid fa-box',
+  'mj-hero':'fa-solid fa-panorama','mj-accordion':'fa-solid fa-rectangle-list',
+  'mj-table':'fa-solid fa-table','mj-raw':'fa-solid fa-code',
+  'mj-navbar':'fa-solid fa-bars','mj-navbar-link':'fa-solid fa-link',
+};
+const iconFor = t => iconMap[t] || 'fa-solid fa-cube';
+
+// ── Component library (with mj-body included) ─────────────────
+const compLib = [
+  {name:'Body',     type:'mj-body',           icon:'fa-solid fa-border-all',       desc:'Required root element. Use only once per email.'},
+  {name:'Section',  type:'mj-section',        icon:'fa-regular fa-square-full',    desc:'Row container to hold your columns.'},
+  {name:'Column',   type:'mj-column',         icon:'fa-solid fa-table-columns',    desc:'Vertical column placed inside sections.'},
+  {name:'Group',    type:'mj-group',          icon:'fa-solid fa-object-group',     desc:'Keeps columns side-by-side on mobile.'},
+  {name:'Text',     type:'mj-text',           icon:'fa-solid fa-font',             desc:'Standard rich text and paragraphs.'},
+  {name:'Image',    type:'mj-image',          icon:'fa-regular fa-image',          desc:'Responsive image element.'},
+  {name:'Button',   type:'mj-button',         icon:'fa-solid fa-arrow-pointer',    desc:'Clickable actionable button.'},
+  {name:'Divider',  type:'mj-divider',        icon:'fa-solid fa-grip-lines',       desc:'Horizontal separation line.'},
+  {name:'Spacer',   type:'mj-spacer',         icon:'fa-solid fa-arrows-up-down',   desc:'Empty vertical whitespace.'},
+  {name:'Social',   type:'mj-social',         icon:'fa-solid fa-share-nodes',      desc:'Container for social networks.'},
+  {name:'Social Btn',type:'mj-social-element',icon:'fa-brands fa-twitter',         desc:'Individual social media icon.'},
+  {name:'Wrapper',  type:'mj-wrapper',        icon:'fa-solid fa-box',              desc:'Wraps multiple sections together.'},
+  {name:'Hero',     type:'mj-hero',           icon:'fa-solid fa-panorama',         desc:'Section with background image.'},
+  {name:'Accordion',type:'mj-accordion',      icon:'fa-solid fa-rectangle-list',   desc:'Interactive collapsible panels.'},
+  {name:'Table',    type:'mj-table',          icon:'fa-solid fa-table',            desc:'Raw HTML table for data layout.'},
+];
+
+const containerTypes = new Set([
+  'mj-body','mj-section','mj-column','mj-group',
+  'mj-wrapper','mj-hero','mj-social','mj-accordion','mj-navbar'
+]);
+
+const defaultContent = {
+  'mj-text':'Your text goes here.',
+  'mj-button':'Click Here',
+  'mj-raw':'<!-- Custom HTML -->',
+  'mj-social-element':'Share',
+  'mj-navbar-link':'Link',
+  'mj-table':'<tr><th>Header</th></tr><tr><td>Cell</td></tr>',
+  'mj-accordion-title':'Accordion Title',
+  'mj-accordion-text':'Accordion content goes here.',
+};
+
+const scaffoldMap = {
+  'mj-section':   ['mj-column'],
+  'mj-column':    ['mj-text'],
+  'mj-wrapper':   ['mj-section'],
+  'mj-group':     ['mj-column', 'mj-column'],
+  'mj-social':    ['mj-social-element', 'mj-social-element', 'mj-social-element'],
+  'mj-navbar':    ['mj-navbar-link', 'mj-navbar-link', 'mj-navbar-link'],
+  'mj-accordion': ['mj-accordion-element'],
+  'mj-accordion-element': ['mj-accordion-title', 'mj-accordion-text'],
+  'mj-hero':      ['mj-text'],
+};
+
+function makeNode(type) {
+  const isContainer = containerTypes.has(type);
+  let classes = [];
+  if (type === 'mj-text') classes = ['text-default'];
+  if (type === 'mj-button') classes = ['btn-primary'];
+  if (type === 'mj-section') classes = ['section-default'];
+
+  const node = {
+    id: uid(), type,
+    classes,
+    attrs: {},
+    content: defaultContent[type] || '',
+    children: isContainer ? [] : undefined,
+  };
+
+  // Scaffolding
+  if (scaffoldMap[type]) {
+    for (const childType of scaffoldMap[type]) {
+      node.children.push(makeNode(childType));
+    }
+  }
+
+  return node;
+}
+
+function checkDrop(parentType, dragEl) {
+  if (!dragEl) return false;
+  // Account for dragging from sidebar or within tree
+  let target = dragEl.getAttribute('data-type') ? dragEl : dragEl.querySelector('[data-type]');
+  if (!target && dragEl.closest) target = dragEl.closest('[data-type]');
+  
+  const dragType = target ? target.getAttribute('data-type') : null;
+  if (!dragType) return false;
+  if (!allowedChildrenMap[parentType]) return false;
+  return allowedChildrenMap[parentType].includes(dragType);
+}
+
+const propSuggestions = [
+  'align',
+  'background-color', 'background-position', 'background-repeat', 'background-size', 'background-url',
+  'border', 'border-bottom', 'border-color', 'border-left', 'border-radius', 'border-right', 'border-style', 'border-top', 'border-width',
+  'color', 'container-background-color',
+  'direction',
+  'font-family', 'font-size', 'font-style', 'font-weight',
+  'full-width',
+  'height',
+  'icon-height', 'icon-padding', 'icon-size',
+  'inner-background-color', 'inner-border', 'inner-padding',
+  'letter-spacing', 'line-height',
+  'margin',
+  'max-width',
+  'padding', 'padding-bottom', 'padding-left', 'padding-right', 'padding-top',
+  'text-align', 'text-decoration', 'text-transform',
+  'vertical-align',
+  'width'
+];
+
+const stdAttrMap = {
+  'mj-body':      [],
+  'mj-button':    [{key:'href',placeholder:'https://...'},{key:'target',placeholder:'_blank'}],
+  'mj-image':     [{key:'src',placeholder:'https://...'},{key:'href',placeholder:'https://...'},{key:'alt',placeholder:'description'}],
+  'mj-social-element':[{key:'name',placeholder:'twitter'},{key:'href',placeholder:'https://...'},{key:'src',placeholder:'icon url'}],
+  'mj-navbar-link':[{key:'href',placeholder:'https://...'},{key:'target',placeholder:'_blank'}],
+  'mj-hero':      [{key:'mode',placeholder:'fixed-height'}],
+};
+
+const allowedChildrenMap = {
+  'mj-body':      ['mj-section', 'mj-wrapper', 'mj-hero', 'mj-raw'],
+  'mj-section':   ['mj-column', 'mj-group', 'mj-raw'],
+  'mj-wrapper':   ['mj-section', 'mj-hero', 'mj-raw'],
+  'mj-hero':      ['mj-text', 'mj-image', 'mj-button', 'mj-divider', 'mj-spacer', 'mj-social', 'mj-navbar', 'mj-accordion', 'mj-table', 'mj-raw'],
+  'mj-column':    ['mj-text', 'mj-image', 'mj-button', 'mj-divider', 'mj-spacer', 'mj-social', 'mj-navbar', 'mj-accordion', 'mj-table', 'mj-raw'],
+  'mj-group':     ['mj-column', 'mj-raw'],
+  'mj-social':    ['mj-social-element'],
+  'mj-navbar':    ['mj-navbar-link'],
+  'mj-accordion': ['mj-accordion-element'],
+  'mj-accordion-element': ['mj-accordion-title', 'mj-accordion-text'],
+};
+
+// ── Tree Node Component ───────────────────────────────────────
+const TreeNodeComp = {
+  name:'tree-node',
+  props:{node:Object,selectedId:String},
+  emits:['select','delete','hover'],
+  components:{Draggable},
+  template:`
+    <div class="tree-node" @mouseleave.self="$emit('hover',null)" :data-type="node.type">
+      <div class="tree-node-row" :class="{selected:node.id===selectedId}"
+           :data-type="node.type"
+           @click.stop="$emit('select',node.id)"
+           @mouseenter.stop="$emit('hover',node.id)"
+           @mouseleave.stop="$emit('hover',null)">
+        <i class="tree-node-icon" :class="iconFor(node.type)"></i>
+        <span class="tree-node-type">{{node.type}}</span>
+        <div class="node-classes">
+          <span class="node-class-tag" v-for="c in (node.classes||[]).slice(0,2)" :key="c" :title="c">.{{c}}</span>
+          <span class="node-class-tag" v-if="(node.classes||[]).length>2" style="color:#94a3b8">+{{node.classes.length-2}}</span>
+        </div>
+        <button class="tree-node-delete" @click.stop="$emit('delete',node)"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div v-if="node.type==='mj-text'||node.type==='mj-button'" class="tree-node-preview">{{stripHtml(node.content)||'—'}}</div>
+      <div v-if="node.children!==undefined" class="tree-node-children">
+        <Draggable :list="node.children" 
+                   :group="{
+                     name: 'mjml',
+                     put: (to, from, dragEl) => checkDrop(node.type, dragEl)
+                   }" 
+                   item-key="id"
+                   ghost-class="sortable-ghost" drag-class="sortable-drag" class="drop-zone">
+          <template #item="{element}">
+            <tree-node :node="element" :selected-id="selectedId"
+                       @select="$emit('select',$event)"
+                       @delete="$emit('delete',$event)"
+                       @hover="$emit('hover',$event)"></tree-node>
+          </template>
+          <template #footer>
+            <div class="drop-hint-list" :class="{ 'persistent-hint': node.children.length > 0 }">
+              <div class="drop-hint-title">Drop or Add:</div>
+              <div class="drop-hint-items">
+                <button v-for="c in getAllowed()" :key="c.type" class="drop-hint-btn" @click="addChild(c.type)">
+                  + {{c.name}}
+                </button>
+              </div>
+            </div>
+          </template>
+        </Draggable>
+      </div>
+    </div>
+  `,
+  methods:{
+    checkDrop,
+    iconFor,
+    stripHtml(h){
+      if(!h) return '';
+      try{ return new DOMParser().parseFromString(h,'text/html').body.textContent||''; }
+      catch{ return h.replace(/<[^>]+>/g,''); }
+    },
+    getAllowed(){
+      const types = allowedChildrenMap[this.node.type] || [];
+      return types.map(t => {
+        const item = compLib.find(c => c.type === t);
+        return { type: t, name: item ? item.name : t.replace('mj-', '') };
+      });
+    },
+    addChild(type){
+      if (!this.node.children) this.node.children = [];
+      this.node.children.push(makeNode(type));
+    }
+  }
+};
+
+// ── Main App ─────────────────────────────────────────────────
+const app = createApp({
+  components:{Draggable,'tree-node':TreeNodeComp},
+  setup(){
+    const deviceWidth   = ref('100%');
+    const deviceLabel   = computed(()=>({'100%':'Desktop','768px':'Tablet 768px','414px':'Mobile L 414px','375px':'Mobile S 375px'}[deviceWidth.value]||deviceWidth.value));
+    const previewTheme  = ref('light');
+    const viewMode      = ref('builder');
+    const showGuides    = ref(false);
+    const tab           = ref('node');
+    const selectedId    = ref(null);
+    const previewFrame  = ref(null);
+    const previewWrap   = ref(null);
+    const previewHeight = ref(600);
+    const compileError  = ref(false);
+
+    // Export
+    const exportOpen    = ref(false);
+    const exportTab     = ref('light');
+    const exportHtml    = ref('');
+    const exportHtmlDark= ref('');
+
+    // Import
+    const importOpen      = ref(false);
+    const importText      = ref('');
+    const importErr       = ref('');
+    const importFileInput = ref(null);
+
+    // IO menu
+    const ioMenuOpen = ref(false);
+    function closeIoMenu(e){ if(!e.target.closest('#io-wrap')) ioMenuOpen.value=false; }
+    onMounted(()=>document.addEventListener('click',closeIoMenu));
+
+    // Context from localStorage
+    const SAVE_KEY='mailarchitect_v1';
+    let savedStateCache = null;
+
+    // Welcome & New Email Data
+    const welcomeOpen = ref(true);
+    const confirmNewOpen = ref(false);
+    const hasSavedEmail = ref(false);
+
+    // Undo / State
+    const undoStack = ref([]);
+    const redoStack = ref([]);
+    const canUndo = computed(() => undoStack.value.length > 1);
+    const canRedo = computed(() => redoStack.value.length > 0);
+    let isUndoing = false;
+    let undoTimer = null;
+
+    function pushUndoState() {
+      if (isUndoing) return;
+      const stateStr = JSON.stringify({
+        tree: tree.value,
+        classes: classes.value
+      });
+      const last = undoStack.value[undoStack.value.length - 1];
+      if (last !== stateStr) {
+        undoStack.value.push(stateStr);
+        if (undoStack.value.length > 50) undoStack.value.shift();
+        redoStack.value = [];
+      }
+    }
+
+    function scheduleUndoPush() {
+      if(isUndoing) return;
+      if(undoTimer) clearTimeout(undoTimer);
+      undoTimer = setTimeout(pushUndoState, 800);
+    }
+
+    function undo() {
+      if (undoTimer) clearTimeout(undoTimer);
+      if (undoStack.value.length <= 1) return;
+      isUndoing = true;
+      const current = undoStack.value.pop(); // discard current state
+      redoStack.value.push(current);
+      const prevStr = undoStack.value[undoStack.value.length - 1];
+      try {
+        const state = JSON.parse(prevStr);
+        tree.value = state.tree;
+        classes.value = state.classes;
+        selectedId.value = null;
+      } catch(e) {}
+      
+      scheduleRender();
+      nextTick(() => { isUndoing = false; });
+    }
+
+    function redo() {
+      if (undoTimer) clearTimeout(undoTimer);
+      if (redoStack.value.length === 0) return;
+      isUndoing = true;
+      const nextStr = redoStack.value.pop();
+      undoStack.value.push(nextStr);
+      try {
+        const state = JSON.parse(nextStr);
+        tree.value = state.tree;
+        classes.value = state.classes;
+        selectedId.value = null;
+      } catch(e) {}
+      
+      scheduleRender();
+      nextTick(() => { isUndoing = false; });
+    }
+
+    // Toast
+    const toastShow    = ref(false);
+    const toastSuccess = ref(false);
+    const toastMsg     = ref('');
+    let toastTimer = null;
+    function toast(msg,ok=true){
+      toastMsg.value=msg; toastSuccess.value=ok; toastShow.value=true;
+      if(toastTimer) clearTimeout(toastTimer);
+      toastTimer=setTimeout(()=>{toastShow.value=false;},2200);
+    }
+
+    // Classes
+    const newClassName = ref('');
+    const classes = ref([
+      {name:'body-bg',    props:{'background-color':'#f4f4f4'}, dark:true, darkProps:{'background-color':'#0d0d0d'}, _open:false,_pk:'',_pv:'',_dpk:'',_dpv:''},
+      {name:'text-default', props:{'color':'#1e293b', 'font-size':'14px', 'line-height':'1.6'}, dark:true, darkProps:{'color':'#ffffff'}, _open:false,_pk:'',_pv:'',_dpk:'',_dpv:''},
+      {name:'btn-primary', props:{'background-color':'#4f46e5', 'color':'#ffffff', 'font-weight':'bold', 'border-radius':'6px', 'padding':'12px 24px'}, dark:false, darkProps:{}, _open:false,_pk:'',_pv:'',_dpk:'',_dpv:''},
+      {name:'section-default', props:{'padding':'20px'}, dark:false, darkProps:{}, _open:false,_pk:'',_pv:'',_dpk:'',_dpv:''}
+    ]);
+
+    // Document tree
+    const tree = ref([{
+      id:'root', type:'mj-body', classes:['body-bg'], attrs:{}, content:'',
+      children:[]
+    }]);
+
+    const hasContent = computed(()=>{
+      return tree.value.length>0 && tree.value[0].children && tree.value[0].children.length>0;
+    });
+
+    const selectedNode = computed(()=> selectedId.value ? findNode(tree.value,selectedId.value) : null);
+
+    function findNode(nodes,id){ for(const n of nodes){if(n.id===id)return n; if(n.children){const f=findNode(n.children,id);if(f)return f;}} return null; }
+    function removeNode(nodes,target){ const i=nodes.findIndex(n=>n.id===target.id);if(i>-1){nodes.splice(i,1);return true;} for(const n of nodes){if(n.children&&removeNode(n.children,target))return true;} return false; }
+
+    function selectNode(id){ selectedId.value=id; tab.value='node'; }
+    function deleteNode(n){ if(selectedId.value===n.id)selectedId.value=null; removeNode(tree.value,n); }
+    function clearDoc(){
+      if(!confirm('Clear entire document?'))return;
+      tree.value=[{id:'root',type:'mj-body',classes:['body-bg'],attrs:{},content:'',children:[]}];
+      selectedId.value=null;
+    }
+    function cloneNode(tpl){
+      return makeNode(tpl.type);
+    }
+
+    // Class helpers
+    const pendingClass = ref('');
+    const inlineEditClass = ref(null);
+    const availableClasses = computed(()=>{
+      const applied = new Set(selectedNode.value?.classes||[]);
+      return classes.value.filter(c=>!applied.has(c.name));
+    });
+    function getClassObj(name){ return classes.value.find(x=>x.name===name)||null; }
+    function toggleInlineEdit(name){ inlineEditClass.value = inlineEditClass.value===name ? null : name; }
+    function addClass(){ if(pendingClass.value&&selectedNode.value){ if(!selectedNode.value.classes)selectedNode.value.classes=[];selectedNode.value.classes.push(pendingClass.value);pendingClass.value=''; } }
+    function removeClass(n){ if(selectedNode.value){ selectedNode.value.classes=(selectedNode.value.classes||[]).filter(c=>c!==n); if(inlineEditClass.value===n) inlineEditClass.value=null; } }
+    function createClass(){ const name=newClassName.value.trim().toLowerCase().replace(/[^a-z0-9_-]/g,'-');if(!name||classes.value.find(c=>c.name===name))return;classes.value.unshift({name,props:{},dark:false,darkProps:{},_open:true,_pk:'',_pv:'',_dpk:'',_dpv:''});newClassName.value=''; }
+    function deleteClass(i){ classes.value.splice(i,1); }
+    function toggleClass(ci) {
+      const target = classes.value[ci];
+      const wasOpen = target._open;
+      classes.value.forEach(c => c._open = false);
+      target._open = !wasOpen;
+    }
+    function editClass(name) {
+      toggleInlineEdit(name);
+    }
+    function goToClassDef(name) {
+      tab.value = 'classes';
+      classes.value.forEach(c => c._open = false);
+      const c = classes.value.find(x => x.name === name);
+      if (c) c._open = true;
+      nextTick(() => {
+        const el = document.getElementById('cls-card-' + name);
+        if (el) el.scrollIntoView({behavior: 'smooth', block: 'start'});
+      });
+    }
+    function addProp(cls){ if(cls._pk){cls.props[cls._pk]=cls._pv||'';cls._pk='';cls._pv=''; scheduleRender();} }
+    function deleteProp(cls,k){ delete cls.props[k]; scheduleRender(); }
+    function addDarkProp(cls){ if(!cls.darkProps) cls.darkProps={}; if(cls._dpk){cls.darkProps[cls._dpk]=cls._dpv||'';cls._dpk='';cls._dpv=''; scheduleRender();} }
+    function deleteDarkProp(cls,k){ if(cls.darkProps) delete cls.darkProps[k]; scheduleRender(); }
+
+    function addPropImmediate(cls, val) {
+      if (!val) return;
+      if (val === 'CUSTOM_PROP') {
+        cls._showCustom = true;
+        cls._pk = '';
+        cls._pv = '';
+        return;
+      }
+      if (!cls.props[val]) cls.props[val] = '';
+      cls._showCustom = false;
+      scheduleRender();
+    }
+    function addDarkPropImmediate(cls, val) {
+      if (!val) return;
+      if (val === 'CUSTOM_PROP') {
+        cls._showCustomDark = true;
+        cls._dpk = '';
+        cls._dpv = '';
+        return;
+      }
+      if (!cls.darkProps) cls.darkProps = {};
+      if (!cls.darkProps[val]) cls.darkProps[val] = '';
+      cls._showCustomDark = false;
+      scheduleRender();
+    }
+
+    // Node helpers
+    function nodeHasContent(type){ return['mj-text','mj-button','mj-raw','mj-table','mj-navbar-link','mj-social-element'].includes(type); }
+    function stdAttrs(type){ return stdAttrMap[type]||[]; }
+
+    // ── Color helpers ──────────────────────────────────────
+    const COLOR_PROP_KEYS = new Set([
+      'color','background-color','border-color',
+    ]);
+    function isColorProp(key){
+      if(!key) return false;
+      return COLOR_PROP_KEYS.has(key) || key.includes('color') || key.includes('background');
+    }
+    // Convert any CSS color string to #rrggbb that <input type=color> accepts
+    function colorToHex(val){
+      if(!val || typeof val !== 'string') return '#000000';
+      const v = val.trim();
+      // Already 6-digit hex
+      if(/^#[0-9a-f]{6}$/i.test(v)) return v.toLowerCase();
+      // Expand 3-digit hex
+      if(/^#[0-9a-f]{3}$/i.test(v)) return '#'+v[1]+v[1]+v[2]+v[2]+v[3]+v[3];
+      // Use canvas to convert rgb/hsl/named colors
+      try{
+        const c=document.createElement('canvas'); c.width=c.height=1;
+        const ctx=c.getContext('2d'); ctx.fillStyle=v; ctx.fillRect(0,0,1,1);
+        const d=ctx.getImageData(0,0,1,1).data;
+        return '#'+[d[0],d[1],d[2]].map(n=>n.toString(16).padStart(2,'0')).join('');
+      }catch{ return '#000000'; }
+    }
+
+    // ── MJML compiler ────────────────────────────────
+    function buildAttrs(node){
+      let s='';
+      if(node.classes&&node.classes.length) s+=` mj-class="${node.classes.join(' ')}"`;
+      // Always include a unique css-class for hover-highlight targeting in preview
+      const cssClasses=[`mja-${node.id}`];
+      if(node.classes&&node.classes.length) cssClasses.push(...node.classes);
+      s+=` css-class="${cssClasses.join(' ')}"`;
+      if(node.attrs){ for(const[k,v]of Object.entries(node.attrs)){if(v!==undefined&&v!==null&&v!=='')s+=` ${k}="${String(v).replace(/"/g,'&quot;')}"`;} }
+      return s;
+    }
+
+    function compileNode(node,depth){
+      const pad='  '.repeat(depth);
+      const attrs=buildAttrs(node);
+      const isLeaf=node.children===undefined;
+      if(isLeaf&&!node.content) return `${pad}<${node.type}${attrs} />`;
+      let out=`${pad}<${node.type}${attrs}>`;
+      if(node.content){
+        let c=node.content;
+        out+='\n'+'  '.repeat(depth+1)+c;
+      }
+      if(node.children){ if(node.children.length){out+='\n';for(const c of node.children)out+=compileNode(c,depth+1)+'\n';out+=pad;} }
+      out+=`</${node.type}>`;
+      return out;
+    }
+
+    const mjmlSource = computed(()=>{
+      // mj-attributes block
+      let attrs='      <mj-all font-family="Inter, system-ui, -apple-system, sans-serif" />\n      <mj-text font-size="inherit" color="inherit" line-height="inherit" />\n';
+      for(const cls of classes.value){
+        const keys=Object.keys(cls.props);
+        if(keys.length){ const ps=keys.map(k=>`${k}="${cls.props[k]}"`).join(' '); attrs+=`      <mj-class name="${cls.name}" ${ps} />\n`; }
+      }
+
+      // Standard CSS for all used classes
+      let linkCss = '';
+      const usedLinkCls = new Set();
+      function scanForLinkCls(list){
+        for(const n of list){
+          if(n.classes) n.classes.forEach(c => usedLinkCls.add(c));
+          if(n.content){
+            const m = n.content.matchAll(/class="([^"]+)"/g);
+            for(const match of m) usedLinkCls.add(match[1]);
+          }
+          if(n.children) scanForLinkCls(n.children);
+        }
+      }
+      scanForLinkCls(tree.value);
+      for(const lc of usedLinkCls){
+        const cls = classes.value.find(c=>c.name===lc);
+        if(cls){
+          linkCss += `      .${lc} {\n`;
+          for(const [k,v] of Object.entries(cls.props)) linkCss += `        ${k}: ${v} !important;\n`;
+          linkCss += `      }\n`;
+        }
+      }
+
+      let darkCss='';
+      for(const c of classes.value){
+        if(c.dark && c.darkProps && Object.keys(c.darkProps).length>0){
+          const p = Object.entries(c.darkProps).map(([k,v]) => `${k}: ${v} !important;`).join(' ');
+          darkCss += `      .mja-forced-dark .${c.name}, .mja-forced-dark.${c.name} { ${p} }\n`;
+          darkCss += `      @media (prefers-color-scheme: dark) { .${c.name} { ${p} } }\n`;
+        }
+      }
+
+      const styleComb = (linkCss + darkCss).trim();
+      const stylePart = styleComb ? `    <mj-style>\n      ${styleComb}\n    </mj-style>\n`:'';
+
+      let body='';
+      for(const n of tree.value){
+        body+=compileNode(n,1)+'\n';
+      }
+
+      return `<mjml>\n  <mj-head>\n    <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />\n    <mj-attributes>\n${attrs}    </mj-attributes>\n${stylePart}  </mj-head>\n${body}</mjml>`;
+    });
+
+    // Strip builder-internal mja-{id} classes for clean user output
+    const cleanMjmlSource = computed(() => {
+      let src = mjmlSource.value;
+      
+      // 1. Remove internal targeting classes from attributes (css-class="...")
+      src = src.replace(/css-class="([^"]*)"/g, (match, val) => {
+        const cleaned = val.replace(/\bmja-[a-z0-9]+\b/g, '').replace(/\s+/g,' ').trim();
+        return cleaned ? `css-class="${cleaned}"` : '';
+      });
+
+      // 2. Remove internal targeting classes from standard HTML attributes in content (class="...")
+      src = src.replace(/\bclass="([^"]*)"/g, (match, val) => {
+        const cleaned = val.replace(/\bmja-[a-z0-9]+\b/g, '').replace(/\s+/g,' ').trim();
+        return `class="${cleaned}"`;
+      });
+
+      // 3. Remove .mja-forced-dark selectors from the generated <mj-style>
+      // These looks like: .mja-forced-dark .classname, .mja-forced-dark.classname { ... }
+      src = src.replace(/\.mja-forced-dark\s+\.[a-z0-9_-]+,\s+\.mja-forced-dark\.[a-z0-9_-]+\s*\{[^}]+\}/gi, '');
+
+      // 4. Clean up any leftover double-spaces or empty attributes
+      return src.replace(/  +/g, ' ').replace(/class=""/g, '').trim();
+    });
+
+    // MJML resolver
+    function getMjml2Html(){
+      if(typeof window.mjml==='function') return window.mjml;
+      if(window.mjml&&typeof window.mjml.default==='function') return window.mjml.default;
+      if(typeof window.mjml2html==='function') return window.mjml2html;
+      throw new Error('mjml-browser not loaded');
+    }
+
+    // ── Rich text editor (contenteditable) ────────────────────
+    const rteEl = ref(null);
+    const showRawHtml = ref(false);
+    const linkPop = Vue.reactive({ show:false, url:'', cls:'', target:'', savedRange:null, editNode:null });
+    
+    watch(showRawHtml, (isRaw) => {
+      if (!isRaw) {
+        nextTick(() => {
+          if(!rteEl.value||!selectedNode.value) return;
+          rteEl.value.innerHTML = selectedNode.value.content||'';
+        });
+      }
+    });
+    
+    function onRteClick(e) {
+      const a = e.target.closest('a');
+      if (a) {
+        linkPop.savedRange = null; 
+        linkPop.editNode = a;
+        linkPop.url = a.getAttribute('href') || '';
+        linkPop.cls = a.getAttribute('class') || '';
+        linkPop.target = a.getAttribute('target') || '';
+        linkPop.show = true;
+      }
+    }
+
+    // Sync editor content when selected node changes
+    watch(selectedId, ()=>{
+      showRawHtml.value = false;
+      nextTick(()=>{
+        if(!rteEl.value||!selectedNode.value) return;
+        rteEl.value.innerHTML = selectedNode.value.content||'';
+      });
+    });
+
+    function onRteInput(){
+      if(!rteEl.value||!selectedNode.value) return;
+      selectedNode.value.content=rteEl.value.innerHTML;
+      scheduleRender();
+    }
+    function insertRteBr(){
+      document.execCommand('insertHTML',false,'<br>');
+    }
+    function execFmt(cmd){
+      rteEl.value?.focus();
+      document.execCommand(cmd,false,null);
+      onRteInput();
+    }
+    function saveRange(){
+      const sel=window.getSelection();
+      if(sel&&sel.rangeCount) linkPop.savedRange=sel.getRangeAt(0).cloneRange();
+    }
+    function startLink(){
+      saveRange();
+      const sel=window.getSelection();
+      if(!sel||sel.isCollapsed){ toast('Select text first to add a link',false); return; }
+      linkPop.editNode=null; linkPop.url=''; linkPop.cls=''; linkPop.target='_blank'; linkPop.show=true;
+    }
+    function applyLink(){
+      if(!linkPop.url) return;
+      let a;
+      if (linkPop.editNode) {
+        a = linkPop.editNode;
+      } else {
+        if(!linkPop.savedRange) return;
+        const sel=window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(linkPop.savedRange);
+        const range=sel.getRangeAt(0);
+        a=document.createElement('a');
+        try{ range.surroundContents(a); }
+        catch{ const f=range.extractContents(); a.appendChild(f); range.insertNode(a); }
+        sel.removeAllRanges();
+      }
+
+      a.href=linkPop.url;
+      if (linkPop.target) a.setAttribute('target', linkPop.target);
+      else a.removeAttribute('target');
+
+      if(linkPop.cls){
+        const cls=classes.value.find(c=>c.name===linkPop.cls);
+        if(cls){
+          const styles=[];
+          if(cls.props.color) styles.push(`color:${cls.props.color}`);
+          if(cls.props['font-weight']) styles.push(`font-weight:${cls.props['font-weight']}`);
+          if(styles.length) a.setAttribute('style',styles.join(';'));
+          else a.removeAttribute('style');
+        }
+        a.setAttribute('class',linkPop.cls);
+      } else {
+        a.removeAttribute('class');
+        a.removeAttribute('style');
+      }
+      
+      linkPop.show=false;
+      onRteInput();
+    }
+    function removeLinkFromPopup() {
+      if(linkPop.editNode) {
+        const f = document.createDocumentFragment();
+        while(linkPop.editNode.firstChild) f.appendChild(linkPop.editNode.firstChild);
+        linkPop.editNode.parentNode.replaceChild(f, linkPop.editNode);
+        linkPop.show=false;
+        onRteInput();
+      }
+    }
+    function removeLink(){
+      rteEl.value?.focus();
+      document.execCommand('unlink',false,null);
+      onRteInput();
+    }
+
+    // Re-render preview when switching back to builder view
+    watch(viewMode, (v) => {
+      if (v === 'builder') {
+        // We need a slight delay to let the v-if hide/show the preview panel
+        // and for the iframe ref to be restored.
+        setTimeout(() => {
+          if (previewFrame.value) {
+            scheduleRender();
+          } else {
+            // Retry once if frame not ready
+            nextTick(() => setTimeout(scheduleRender, 150));
+          }
+        }, 100);
+      }
+    });
+
+    // Selection in preview
+    const prevSel = reactive({ show:false, x:0, y:0, text:'', node:null, range:null });
+    
+    function detectPreviewSelection(){
+      const win = previewFrame.value?.contentWindow;
+      if(!win) return;
+      const sel = win.getSelection();
+      if(!sel || sel.isCollapsed || !sel.toString().trim()) {
+        prevSel.show = false;
+        return;
+      }
+      
+      const range = sel.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+      
+      // Find the MJML node this selection belongs to
+      let el = range.commonAncestorContainer;
+      if(el.nodeType===3) el = el.parentElement;
+      while(el && el!==win.document.body){
+        const mc = [...el.classList].find(c=>c.startsWith('mja-') && c!=='mja-hl');
+        if(mc){
+          const nodeId = mc.replace('mja-','');
+          const node = findNodeById(tree.value, nodeId);
+          if(node && node.type==='mj-text'){
+            prevSel.node = node;
+            prevSel.text = sel.toString();
+            prevSel.range = range;
+            prevSel.x = rect.left + (rect.width/2);
+            prevSel.y = rect.top;
+            prevSel.show = true;
+            return;
+          }
+        }
+        el = el.parentElement;
+      }
+      prevSel.show = false;
+    }
+
+    function openLinkFromPreview(){
+      if(!prevSel.node) return;
+      selectNode(prevSel.node.id);
+      // Wait for RTE to sync
+      nextTick(()=>{
+        linkPop.url = '';
+        linkPop.cls = '';
+        linkPop.show = true;
+        // Try to select the same text in the RTE to make link creation seamless
+        // This is a "best effort" because HTML structure might differ
+        toast('Adding link to: "'+prevSel.text.substring(0,20)+'..."');
+      });
+      prevSel.show = false;
+    }
+
+    function findNodeById(list, id){
+      for(const n of list){
+        if(n.id===id) return n;
+        if(n.children){
+          const found = findNodeById(n.children, id);
+          if(found) return found;
+        }
+      }
+      return null;
+    }
+
+    // Apply hover highlight directly on the iframe DOM (file:// compatible, no postMessage needed)
+    const hoverNodeId = ref(null);
+    function setHoverNode(id){ hoverNodeId.value=id; }
+
+    // Apply hover highlight directly on the iframe DOM (file:// compatible, no postMessage needed)
+    function applyHoverHighlight(id){
+      try{
+        const iDoc=previewFrame.value?.contentDocument;
+        if(!iDoc)return;
+        iDoc.querySelectorAll('.mja-hl').forEach(el=>el.classList.remove('mja-hl'));
+        if(id && id !== selectedId.value){
+          iDoc.querySelectorAll('.mja-'+id).forEach(el=>el.classList.add('mja-hl'));
+        }
+      }catch{}
+    }
+    watch(hoverNodeId,(id)=>{ applyHoverHighlight(id); });
+
+    function applySelectionHighlight(id){
+      try{
+        const iDoc=previewFrame.value?.contentDocument;
+        if(!iDoc)return;
+        iDoc.querySelectorAll('.mja-selected').forEach(el=>el.classList.remove('mja-selected'));
+        if(id){
+          iDoc.querySelectorAll('.mja-'+id).forEach(el=>el.classList.add('mja-selected'));
+        }
+      }catch{}
+    }
+    watch(selectedId,(id)=>{ applySelectionHighlight(id); });
+
+    // Preview render
+    let debounceTimer=null;
+    const HOVER_STYLE=`<style id="mja-hl-style">
+      .mja-hl{outline:2px solid rgba(99,102,241,0.5)!important;outline-offset:1px!important;border-radius:2px!important;}
+      .mja-selected{outline:2px solid #6366f1!important;outline-offset:1px!important;border-radius:2px!important;box-shadow:0 0 0 4px rgba(99,102,241,0.1)!important;}
+      
+      /* Make the area outside the email bounds look like a canvas */
+      html { background-color: #f1f5f9; }
+      body {
+        margin: 0 !important;
+        background-color: transparent !important;
+        background-image: repeating-linear-gradient(45deg, rgba(0,0,0,0.03) 0px, rgba(0,0,0,0.03) 10px, transparent 10px, transparent 20px) !important;
+      }
+      /* Ensure the email boundary itself floats and has a solid background so it isn't striped */
+      body > div {
+        background-color: #ffffff;
+        box-shadow: 0 0 0 1px rgba(0,0,0,0.05), 0 8px 40px rgba(0,0,0,0.08) !important;
+        min-height: 100vh;
+      }
+    </style>`;
+    function renderPreview(){
+      if(!previewFrame.value)return;
+      try{
+        const fn=getMjml2Html();
+        let src = mjmlSource.value;
+        if (previewTheme.value === 'dark') {
+          src = src.replace(/<mj-body([^>]*)>/i, (match, attrs) => attrs.includes('css-class="') ? `<mj-body${attrs.replace('css-class="', 'css-class="mja-forced-dark ')}>` : `<mj-body css-class="mja-forced-dark"${attrs}>`);
+        }
+        const r=fn(src,{keepComments:false,validationLevel:'soft'});
+        compileError.value=false;
+        let html=r.html;
+        html=disableSystemDark(html);
+        html=stripDivTypography(html);
+        // Inject hover-highlight CSS (no JS needed — we access iframe DOM directly)
+        html=html.replace(/<\/head>/,HOVER_STYLE+'</head>');
+        const doc=previewFrame.value.contentDocument;
+        doc.open();doc.write(html);doc.close();
+        
+        // Wire up click-to-select: clicking any element in the preview selects its node in the tree
+        try{
+          doc.addEventListener('click',(e)=>{
+            e.preventDefault();
+            let el=e.target;
+            while(el&&el!==doc.body){
+              const mc=[...el.classList].find(c=>c.startsWith('mja-')&&c!=='mja-hl');
+              if(mc){ selectNode(mc.replace('mja-','')); return; }
+              el=el.parentElement;
+            }
+          },true);
+          // Show pointer cursor so user knows it's clickable
+          const st=doc.createElement('style');
+          st.textContent='body *{cursor:pointer!important}';
+          doc.head.appendChild(st);
+
+          // Add selection listener
+          doc.addEventListener('selectionchange', detectPreviewSelection);
+          doc.addEventListener('mouseup', detectPreviewSelection);
+          doc.addEventListener('keyup', detectPreviewSelection);
+          doc.addEventListener('scroll', ()=> { prevSel.show = false; });
+        }catch{}
+        // Restore highlights after render
+        setTimeout(()=>{
+          applySelectionHighlight(selectedId.value);
+          applyHoverHighlight(hoverNodeId.value);
+        },50);
+        setTimeout(()=>{ try{const h=previewFrame.value.contentDocument.documentElement.scrollHeight;if(h>100)previewHeight.value=h+20;}catch{} },350);
+      } catch(e){
+        compileError.value=true;
+        console.warn('MJML error:',e);
+      }
+    }
+    function scheduleRender(){ if(debounceTimer)clearTimeout(debounceTimer);debounceTimer=setTimeout(renderPreview,600); }
+    watch([tree,classes,previewTheme],scheduleRender,{deep:true});
+    function setDevice(w){ deviceWidth.value=w; }
+    function setTheme(t){ previewTheme.value=t; scheduleRender(); }
+
+    function copyCode(){ navigator.clipboard.writeText(cleanMjmlSource.value).then(()=>toast('MJML copied!')); }
+    function copyHtml(){ navigator.clipboard.writeText(exportHtml.value).then(()=>toast('HTML copied!')); }
+    function downloadHtml(){
+      const a=document.createElement('a');
+      a.href='data:text/html;charset=utf-8,'+encodeURIComponent(exportHtml.value);
+      a.download='email.html';a.click();toast('Downloaded!');
+    }
+    function exportMjml(){
+      const blob=new Blob([cleanMjmlSource.value],{type:'text/plain'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url;a.download='email-template.mjml';a.click();
+      URL.revokeObjectURL(url);ioMenuOpen.value=false;toast('MJML downloaded!');
+    }
+    function triggerImport(){ ioMenuOpen.value=false;importErr.value='';if(importFileInput.value)importFileInput.value.click(); }
+    function triggerWelcomeImport(){ welcomeOpen.value=false; triggerImport(); }
+    function openImportModal(){ ioMenuOpen.value=false;importText.value='';importErr.value='';importOpen.value=true; welcomeOpen.value=false; }
+    function handleFileImport(e){ const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{importText.value=ev.target.result;importErr.value='';importOpen.value=true;welcomeOpen.value=false;};reader.readAsText(file);e.target.value=''; }
+
+    function parseMjmlToTree(src){
+      const parser=new DOMParser();
+      const doc=parser.parseFromString(src,'application/xml');
+      if(doc.querySelector('parsererror')) throw new Error('Invalid XML/MJML.');
+      let _idCtr=1; const mkid=()=>'imp-'+(_idCtr++);
+      const CONTAINERS=new Set(['mj-body','mj-section','mj-wrapper','mj-hero','mj-column','mj-group','mj-social','mj-accordion','mj-navbar']);
+      const TEXT_NODES=new Set(['mj-text','mj-button','mj-raw','mj-table','mj-social-element','mj-navbar-link']);
+      function parseEl(el){
+        const type=el.tagName; const cls=(el.getAttribute('mj-class')||'').split(' ').filter(Boolean);
+        const attrs={};for(const a of el.attributes){if(a.name!=='mj-class')attrs[a.name]=a.value;}
+        let content='',children=undefined;
+        if(TEXT_NODES.has(type))content=el.innerHTML;
+        else if(CONTAINERS.has(type)){children=[];for(const child of el.children){if(child.tagName.startsWith('mj-'))children.push(parseEl(child));}}
+        return {id:mkid(),type,classes:cls,attrs,content,children};
+      }
+      const newClasses=[];
+      const attrsEl=doc.querySelector('mj-head > mj-attributes');
+      if(attrsEl){for(const c of attrsEl.querySelectorAll('mj-class')){const name=c.getAttribute('name');if(!name)continue;const props={};for(const a of c.attributes){if(a.name!=='name')props[a.name]=a.value;}newClasses.push({name,props,_open:false,_pk:'',_pv:''}); }}
+      const bodyEl=doc.querySelector('mj-body');
+      if(!bodyEl)throw new Error('No <mj-body> found in MJML.');
+      const bodyNode=parseEl(bodyEl);bodyNode.id='root';
+      return {tree:[bodyNode],newClasses};
+    }
+
+    function applyImport(){
+      importErr.value='';
+      try{
+        const {tree:newTree,newClasses}=parseMjmlToTree(importText.value);
+        tree.value=newTree;
+        if(newClasses.length>0)classes.value=newClasses;
+        selectedId.value=null;importOpen.value=false;importText.value='';
+        welcomeOpen.value=false;
+        undoStack.value=[]; redoStack.value=[]; pushUndoState();
+        toast('MJML imported!');setTimeout(renderPreview,200);
+      }catch(e){importErr.value=e.message;}
+    }
+
+    function openExport(){
+      try{
+        const fn=getMjml2Html();
+        const r=fn(cleanMjmlSource.value,{keepComments:false,validationLevel:'soft'});
+        let html=r.html;
+        html=stripDivTypography(html);
+        if(window.html_beautify)html=window.html_beautify(html,{indent_size:2,wrap_line_length:120});
+        exportHtml.value=html;
+
+        const rd=fn(cleanMjmlSource.value.replace(/<mj-body([^>]*)>/i, (match, attrs) => attrs.includes('css-class="') ? `<mj-body${attrs.replace('css-class="', 'css-class="mja-forced-dark ')}>` : `<mj-body css-class="mja-forced-dark"${attrs}>`),{keepComments:false,validationLevel:'soft'});
+        let htmlDark=rd.html;
+        htmlDark=stripDivTypography(htmlDark);
+        if(window.html_beautify)htmlDark=window.html_beautify(htmlDark,{indent_size:2,wrap_line_length:120});
+        exportHtmlDark.value=htmlDark;
+
+        exportTab.value='light';exportOpen.value=true;
+      }catch(e){toast('MJML error: '+e.message,false);}
+    }
+
+    // ── Autosave to localStorage ──────────────────────────────────
+    let saveTimer=null;
+    function disableSystemDark(html){
+      if(!html) return '';
+      return html.replace(/@media\s*\(\s*prefers-color-scheme\s*:\s*dark\s*\)/gi, '@media (prefers-color-scheme: disabled-mode)');
+    }
+
+    function stripDivTypography(html) {
+      if(!html) return html;
+      return html.replace(/<div([^>]*)style="([^"]*)"([^>]*)>/gi, (match, prefix, style, postfix) => {
+        let s = style.replace(/(?:^|;)\s*(?:font-family|font-size|line-height|text-align|color)\s*:[^;]+/gi, '');
+        s = s.replace(/^;+/, '').replace(/;+/g, ';').trim();
+        if(!s || s === ';') return `<div${prefix}${postfix}>`;
+        return `<div${prefix}style="${s}"${postfix}>`;
+      });
+    }
+    
+    function saveNow(){
+      if(welcomeOpen.value) return; // don't autosave while on welcome screen
+      try{
+        localStorage.setItem(SAVE_KEY,JSON.stringify({
+          tree:tree.value,
+          classes:classes.value,
+          ts:Date.now()
+        }));
+      }catch{}
+    }
+    function scheduleSave(){ if(saveTimer)clearTimeout(saveTimer); saveTimer=setTimeout(saveNow,1500); }
+    watch([tree,classes],scheduleSave,{deep:true});
+    // Add watcher for undo pushes too
+    watch([tree,classes],scheduleUndoPush,{deep:true});
+
+    function welcomeContinue() {
+      if (savedStateCache) {
+        tree.value = savedStateCache.tree;
+        if(savedStateCache.classes) classes.value = savedStateCache.classes;
+        undoStack.value = [];
+        redoStack.value = [];
+        pushUndoState();
+      }
+      welcomeOpen.value = false;
+      toast('Restored previous session', true);
+    }
+
+    function welcomeNewEmail() {
+      if (hasSavedEmail.value) {
+        confirmNewOpen.value = true;
+      } else {
+        executeNewEmail();
+      }
+    }
+    
+    function promptNewEmail() {
+      confirmNewOpen.value = true;
+    }
+
+    function executeNewEmail() {
+      tree.value = [{id:'root',type:'mj-body',classes:['body-bg'],attrs:{},content:'',children:[]}];
+      classes.value = [
+        {name:'body-bg',    props:{'background-color':'#f4f4f4'}, _open:false,_pk:'',_pv:''},
+        {name:'text-default', props:{'color':'#1e293b', 'font-size':'14px', 'line-height':'1.6'}, _open:false,_pk:'',_pv:''},
+        {name:'btn-primary', props:{'background-color':'#4f46e5', 'color':'#ffffff', 'font-weight':'bold', 'border-radius':'6px', 'padding':'12px 24px'}, _open:false,_pk:'',_pv:''},
+        {name:'section-default', props:{'padding':'20px'}, _open:false,_pk:'',_pv:''}
+      ];
+      undoStack.value = [];
+      redoStack.value = [];
+      pushUndoState();
+      try{ localStorage.removeItem(SAVE_KEY); }catch{}
+      hasSavedEmail.value = false;
+      savedStateCache = null;
+      confirmNewOpen.value = false;
+      welcomeOpen.value = false;
+      toast('Started new email');
+    }
+
+    // ── Panel resize ─────────────────────────────────────────
+    const leftW = ref(parseInt(localStorage.getItem('mb-leftW'))||110);
+    const treeW = ref(parseInt(localStorage.getItem('mb-treeW'))||280);
+    function startResize(e, panel){
+      e.preventDefault();
+      const handle = e.currentTarget;
+      handle.classList.add('dragging');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      const startX = e.clientX;
+      const startW = panel==='left' ? leftW.value : treeW.value;
+      function onMove(ev){
+        const delta = ev.clientX - startX;
+        if(panel==='left'){
+          leftW.value = Math.max(120, Math.min(320, startW + delta));
+          localStorage.setItem('mb-leftW', leftW.value);
+        } else {
+          treeW.value = Math.max(180, Math.min(520, startW + delta));
+          localStorage.setItem('mb-treeW', treeW.value);
+        }
+      }
+      function onUp(){
+        handle.classList.remove('dragging');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+      }
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+    }
+
+    onMounted(()=>{
+      pushUndoState(); // init undo stack
+      try{
+        const raw=localStorage.getItem(SAVE_KEY);
+        if(raw){
+          const saved=JSON.parse(raw);
+          if(saved.tree&&saved.tree.length){
+            hasSavedEmail.value = true;
+            savedStateCache = saved;
+          }
+        }
+      }catch{}
+
+      setTimeout(renderPreview,900);
+    });
+
+    return {
+      welcomeOpen,welcomeContinue,welcomeNewEmail,triggerWelcomeImport,
+      confirmNewOpen,hasSavedEmail,promptNewEmail,executeNewEmail,
+      undo,redo,canUndo,canRedo,
+      deviceWidth,deviceLabel,previewTheme,viewMode,showGuides,tab,selectedId,selectedNode,
+      previewFrame,previewWrap,previewHeight,compileError,hasContent,
+      componentLibrary:computed(() => {
+        const obj = tree.value.find(n => n.type === 'mj-body');
+        return obj ? compLib.filter(c => c.type !== 'mj-body') : compLib;
+      }),tree,classes,
+      cloneNode,selectNode,deleteNode,clearDoc,
+      pendingClass,inlineEditClass,availableClasses,getClassObj,toggleInlineEdit,addClass,removeClass,
+      newClassName,createClass,deleteClass,toggleClass,editClass,goToClassDef,addProp,deleteProp,addDarkProp,deleteDarkProp,
+      addPropImmediate,addDarkPropImmediate,
+      nodeHasContent,stdAttrs,iconFor,propSuggestions,
+      isColorProp,colorToHex,disableSystemDark,
+      mjmlSource,cleanMjmlSource,setDevice,setTheme,copyCode,
+      exportOpen,exportTab,exportHtml,openExport,copyHtml,downloadHtml,
+      toastShow,toastSuccess,toastMsg,
+      ioMenuOpen,exportMjml,
+      importOpen,importText,importErr,importFileInput,triggerImport,handleFileImport,applyImport,openImportModal,
+      hoverNodeId,setHoverNode,
+      prevSel,openLinkFromPreview,
+      showRawHtml,rteEl,linkPop,execFmt,startLink,applyLink,removeLink,removeLinkFromPopup,onRteInput,onRteClick,insertRteBr,
+      leftW,treeW,startResize,
+    };
+  }
+});
+app.mount('#app');
+</script>
+</body>
+</html>
