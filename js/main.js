@@ -594,12 +594,26 @@ const app = createApp({
       }
     }
 
+    function scrollToSelected() {
+      if (!selectedId.value || !previewFrame.value) return;
+      const doc = previewFrame.value.contentDocument;
+      if (!doc) return;
+      
+      const el = doc.querySelector(`.mja-${selectedId.value}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+
     // Sync editor content when selected node changes
     watch(selectedId, ()=>{
       showRawHtml.value = false;
       nextTick(()=>{
-        if(!rteEl.value||!selectedNode.value) return;
-        rteEl.value.innerHTML = selectedNode.value.content||'';
+        if(rteEl.value && selectedNode.value) {
+          rteEl.value.innerHTML = selectedNode.value.content || '';
+        }
+        // Small delay to ensure any internal MJML re-render (if quick) doesn't capture half-ready state
+        setTimeout(scrollToSelected, 50);
       });
     });
 
@@ -837,7 +851,12 @@ const app = createApp({
         html=stripDivTypography(html);
         html=html.replace(/<\/head>/,HOVER_STYLE+'</head>');
         const doc=previewFrame.value.contentDocument;
-        doc.open();doc.write(html);doc.close();
+        doc.open(); doc.write(html); doc.close();
+      
+        // Auto-focus selected element in preview if it exists
+        if (selectedId.value) {
+          setTimeout(scrollToSelected, 150);
+        }
         
         try{
           doc.addEventListener('click',(e)=>{
