@@ -149,7 +149,11 @@ body{
 .tree-node-row:hover .tree-node-add{opacity:1}
 .tree-node-delete:hover{color:#ef4444;background:#fee2e2; opacity:1}
 .tree-node-add{opacity:0.8; background:#f5f3ff; border:1px solid #ddd6fe; color:#6366f1; } 
+.tree-node-copy{opacity:0.4; font-size:11px; color:#94a3b8; border:none; background:transparent; cursor:pointer; padding:6px; border-radius:6px; transition:all 0.15s; margin-left:4px}
+.tree-node-row:hover .tree-node-copy{opacity:1}
+.tree-node-copy:hover{color:#6366f1; background:#f5f3ff}
 .tree-node-delete{margin-left:4px}
+
 
 
 
@@ -456,7 +460,15 @@ body.dragging .btn-add-inline{opacity:0.1;pointer-events:none}
 .add-block-list-title { font-size: 18px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; margin-bottom: 2px; }
 .add-block-list-sub { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
 
+.add-block-tabs { display: flex; gap: 4px; background: #f1f5f9; padding: 4px; border-radius: 10px; margin-top: 12px; }
+.add-block-tab { 
+  flex: 1; border: none; background: transparent; padding: 6px 12px; font-size: 12px; font-weight: 700;
+  color: #64748b; border-radius: 6px; cursor: pointer; transition: all 0.2s;
+}
+.add-block-tab.active { background: #fff; color: #6366f1; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+
 .add-block-list-scroll { flex: 1; overflow-y: auto; padding: 12px; }
+
 .add-block-cat-label { font-size: 10px; font-weight: 800; color: #6366f1; text-transform: uppercase; letter-spacing: 1.5px; padding: 12px 12px 6px; }
 
 .add-block-item {

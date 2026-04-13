@@ -95,9 +95,13 @@
           <div class="tree-scroll">
             <draggable :list="tree" :group="{ name: 'mjml', put: false }" item-key="id" class="drop-zone" style="min-height:100%">
               <template #item="{element}">
-                <tree-node :node="element" :selected-id="selectedId" @select="selectNode" @delete="deleteNode" @hover="setHoverNode" @add="openAddBlock($event.id, $event.type)"></tree-node>
+                <tree-node :node="element" :selected-id="selectedId" 
+                           @select="selectNode" @delete="deleteNode" @hover="setHoverNode" 
+                           @add="openAddBlock($event.id, $event.type)"
+                           @duplicate="duplicateNode"></tree-node>
               </template>
             </draggable>
+
 
           </div>
         </div>
@@ -452,20 +456,27 @@
         <div class="add-block-list-hdr">
           <div class="add-block-list-title">Available Blocks</div>
           <div class="add-block-list-sub">Add to {{addBlockPop.parentType.replace('mj-','')}}</div>
+          
+          <!-- Tabs -->
+          <div class="add-block-tabs mt-3">
+            <button class="add-block-tab" :class="{active: addBlockPop.tab==='blocks'}" @click="addBlockPop.tab='blocks'">Components</button>
+            <button class="add-block-tab" :class="{active: addBlockPop.tab==='templates'}" @click="addBlockPop.tab='templates'">Templates</button>
+          </div>
         </div>
         <div class="add-block-list-scroll">
-          <div class="add-block-cat-label">Blocks</div>
+          <div class="add-block-cat-label">{{addBlockPop.tab==='blocks' ? 'Base Components' : 'Pre-built Layouts'}}</div>
           <div v-for="comp in popupAllowedTypes" :key="comp.type" 
                class="add-block-item" :class="{active: addBlockPop.hoveredType === comp.type}"
                @mouseenter="addBlockPop.hoveredType = comp.type"
-               @click="addBlockFromPopup(comp.type)">
+               @click="addBlockPop.tab==='blocks' ? addBlockFromPopup(comp.type) : addTemplateFromPopup(comp.type)">
             <div class="add-block-item-icon"><i :class="comp.icon"></i></div>
             <div class="add-block-item-name">{{comp.name}}</div>
           </div>
           <div v-if="!popupAllowedTypes.length" class="p-4 text-center text-muted" style="font-size:12px">
-            No components can be added here.
+            {{addBlockPop.tab==='templates' ? 'Templates are only available for Body/Wrapper' : 'No components can be added here.'}}
           </div>
         </div>
+
       </div>
       
       <!-- Right Side: Details -->
@@ -474,9 +485,10 @@
           <div class="detail-icon-big"><i :class="popupHoveredDetail.icon"></i></div>
           <h2 class="detail-title">{{popupHoveredDetail.name}}</h2>
           <p class="detail-desc">{{popupHoveredDetail.desc}}</p>
-          <button class="detail-btn-add" @click="addBlockFromPopup(popupHoveredDetail.type)">
+          <button class="detail-btn-add" @click="addBlockPop.tab==='blocks' ? addBlockFromPopup(popupHoveredDetail.type) : addTemplateFromPopup(popupHoveredDetail.type)">
             <i class="fa-solid fa-plus me-2"></i> Add {{popupHoveredDetail.name}}
           </button>
+
         </template>
         <template v-else>
           <div class="text-muted">Hover over a component to see details</div>

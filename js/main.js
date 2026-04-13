@@ -35,8 +35,10 @@ const app = createApp({
       show: false,
       parentId: null,
       parentType: '',
-      hoveredType: null
+      hoveredType: null,
+      tab: 'blocks'
     });
+
 
     const linkInput = ref(null);
 
@@ -179,7 +181,7 @@ const app = createApp({
       const parent = findNode(tree.value, addBlockPop.parentId);
       if (parent) {
         if (!parent.children) parent.children = [];
-        const newNode = makeNode(type);
+        const newNode = makeNode(type, false); // No scaffolding by default now
         parent.children.push(newNode);
         selectNode(newNode.id);
         toast(`Added ${type.replace('mj-','')} component`);
@@ -187,16 +189,62 @@ const app = createApp({
       closeAddBlock();
     }
 
+    function addTemplateFromPopup(type) {
+      const tmpl = templateLib.find(t => t.type === type);
+      if (!tmpl || !addBlockPop.parentId) return;
+      
+      const parent = findNode(tree.value, addBlockPop.parentId);
+      if (parent && parent.children) {
+        const newNode = tmpl.build();
+        parent.children.push(newNode);
+        selectNode(newNode.id);
+        toast(`Added ${tmpl.name} template`);
+      }
+      closeAddBlock();
+    }
+
+    function duplicateNode(id) {
+      // Find parent context
+      function findParentAndIndex(nodes, targetId) {
+        for (let i = 0; i < nodes.length; i++) {
+          if (nodes[i].id === targetId) return { list: nodes, index: i };
+          if (nodes[i].children) {
+            const res = findParentAndIndex(nodes[i].children, targetId);
+            if (res) return res;
+          }
+        }
+        return null;
+      }
+
+      const res = findParentAndIndex(tree.value, id);
+      if (res) {
+        const original = res.list[res.index];
+        const clone = deepCloneNode(original);
+        res.list.splice(res.index + 1, 0, clone);
+        selectNode(clone.id);
+        toast(`Duplicated ${original.type.replace('mj-', '')}`);
+        scheduleRender();
+      }
+    }
+
     const popupAllowedTypes = computed(() => {
       if (!addBlockPop.parentType) return [];
+      if (addBlockPop.tab === 'templates') {
+        // Only show templates if the parent is a body or wrapper/hero (usually sections)
+        // or just show all for now, but pre-filter standard ones
+        const isBody = addBlockPop.parentType === 'mj-body' || addBlockPop.parentType === 'mj-wrapper';
+        return isBody ? templateLib : [];
+      }
       const allowed = allowedChildrenMap[addBlockPop.parentType] || [];
       return allowed.map(t => compLib.find(c => c.type === t)).filter(Boolean);
     });
 
     const popupHoveredDetail = computed(() => {
       if (!addBlockPop.hoveredType) return null;
+      if (addBlockPop.tab === 'templates') return templateLib.find(t => t.type === addBlockPop.hoveredType);
       return compLib.find(c => c.type === addBlockPop.hoveredType);
     });
+
 
 
     function clearDoc(){
@@ -1022,8 +1070,10 @@ const app = createApp({
       showRawHtml,rteEl,linkInput,linkPop,execFmt,isFmt,startLink,applyLink,removeLink,removeLinkFromPopup,onRteInput,onRteClick,insertRteBr,
       leftW,treeW,rightW,startResize,
       showAdvanced, openCategories, toggleCategory, isCategoryOpen,
-      addBlockPop, openAddBlock, closeAddBlock, addBlockFromPopup,
+      addBlockPop, openAddBlock, closeAddBlock, addBlockFromPopup, addTemplateFromPopup, duplicateNode,
       popupAllowedTypes, popupHoveredDetail,
+
+
       editorHelpers: {
 
         getPropNumeric, setPropNumeric, getPropValue, setPropValue,

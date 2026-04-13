@@ -2,7 +2,8 @@
 const TreeNodeComp = {
   name:'tree-node',
   props:{node:Object,selectedId:String},
-  emits:['select','delete','hover','add'],
+  emits:['select','delete','hover','add','duplicate'],
+
 
   components:{'Draggable': window.vuedraggable},
   data() { return { showAddMenu: false, collapsed: false }; },
@@ -27,8 +28,12 @@ const TreeNodeComp = {
         <button v-if="node.children!==undefined" class="tree-node-add" @click.stop="$emit('add', {id:node.id, type:node.type})">
           <i class="fa-solid fa-plus"></i>
         </button>
+        <button class="tree-node-copy" @click.stop="$emit('duplicate', node.id)" title="Duplicate">
+          <i class="fa-solid fa-copy"></i>
+        </button>
         <button class="tree-node-delete" @click.stop="$emit('delete',node)"><i class="fa-solid fa-xmark"></i></button>
       </div>
+
 
 
       <div v-if="node.children!==undefined && !collapsed" class="tree-node-children">
@@ -48,7 +53,9 @@ const TreeNodeComp = {
                        @select="$emit('select',$event)"
                        @delete="$emit('delete',$event)"
                        @hover="$emit('hover',$event)"
-                       @add="$emit('add',$event)"></tree-node>
+                       @add="$emit('add',$event)"
+                       @duplicate="$emit('duplicate',$event)"></tree-node>
+
 
           </template>
           <template #footer>

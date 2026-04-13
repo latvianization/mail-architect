@@ -3,7 +3,8 @@ const uid = () => 'n' + Math.random().toString(36).substring(2, 9);
 
 const iconFor = t => iconMap[t] || 'fa-solid fa-cube';
 
-function makeNode(type) {
+function makeNode(type, withScaffold = false) {
+
   const isContainer = containerTypes.has(type);
   let classes = [];
   if (type === 'mj-text') classes = ['text-default'];
@@ -19,14 +20,31 @@ function makeNode(type) {
   };
 
   // Scaffolding
-  if (scaffoldMap[type]) {
+  if (withScaffold && scaffoldMap[type]) {
     for (const childType of scaffoldMap[type]) {
-      node.children.push(makeNode(childType));
+      node.children.push(makeNode(childType, true));
     }
   }
 
+
   return node;
 }
+
+function deepCloneNode(node) {
+  const clone = {
+    ...node,
+    id: uid(), // New unique ID
+    classes: [...(node.classes || [])],
+    attrs: { ...(node.attrs || {}) }
+  };
+  
+  if (node.children) {
+    clone.children = node.children.map(c => deepCloneNode(c));
+  }
+  
+  return clone;
+}
+
 
 function checkDrop(parentType, dragEl) {
   if (!dragEl) return false;

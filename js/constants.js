@@ -121,3 +121,68 @@ const PROP_CATEGORIES = [
   { name: 'Appearance', icon: 'fa-palette', props: ['background-color', 'width'] },
   { name: 'Borders',    icon: 'fa-square', props: ['border-width', 'border-style', 'border-color', 'border-radius'] },
 ];
+
+const templateLib = [
+  {
+    name: '2 Columns',
+    type: 'tmpl-2col',
+    icon: 'fa-solid fa-columns',
+    desc: 'A section pre-filled with two equal columns.',
+    build: () => {
+      const section = makeNode('mj-section');
+      section.children = [makeNode('mj-column'), makeNode('mj-column')];
+      return section;
+    }
+  },
+  {
+    name: 'Hero Unit',
+    type: 'tmpl-hero',
+    icon: 'fa-solid fa-image',
+    desc: 'Hero section with background image and text.',
+    build: () => {
+      const hero = makeNode('mj-hero');
+      hero.attrs.mode = 'fixed-height';
+      hero.attrs['background-url'] = 'https://picsum.photos/800/400';
+      hero.children = [makeNode('mj-column')];
+      hero.children[0].children = [makeNode('mj-text')];
+      hero.children[0].children[0].content = '<h1 style="text-align:center; color:#ffffff">Welcome!</h1>';
+      return hero;
+    }
+  },
+  {
+    name: 'Social Bar',
+    type: 'tmpl-social',
+    icon: 'fa-solid fa-share-nodes',
+    desc: 'Social media container with Twitter, Facebook, and Instagram.',
+    build: () => {
+      const social = makeNode('mj-social');
+      social.children = [
+        makeNode('mj-social-element'),
+        makeNode('mj-social-element'),
+        makeNode('mj-social-element')
+      ];
+      social.children[0].attrs.name = 'twitter';
+      social.children[1].attrs.name = 'facebook';
+      social.children[2].attrs.name = 'instagram';
+      return social;
+    }
+  },
+  {
+    name: 'Product Card',
+    type: 'tmpl-product',
+    icon: 'fa-solid fa-cart-shopping',
+    desc: 'Complete product block: Image, Title, Price and Button.',
+    build: () => {
+      const section = makeNode('mj-section');
+      const column = makeNode('mj-column');
+      const img = makeNode('mj-image');
+      img.attrs.src = 'https://picsum.photos/400/300';
+      const title = makeNode('mj-text');
+      title.content = '<strong>Product Name</strong><br/><span style="color:#6366f1;font-size:18px">$49.00</span>';
+      const btn = makeNode('mj-button');
+      column.children = [img, title, btn];
+      section.children = [column];
+      return section;
+    }
+  }
+];
