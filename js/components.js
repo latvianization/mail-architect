@@ -5,7 +5,8 @@ const TreeNodeComp = {
   emits:['select','delete','hover','add'],
 
   components:{'Draggable': window.vuedraggable},
-  data() { return { showAddMenu: false }; },
+  data() { return { showAddMenu: false, collapsed: false }; },
+
   template: `
     <div class="tree-node" @mouseleave.self="$emit('hover',null)" :data-type="node.type">
       <div class="tree-node-row" :class="{selected:node.id===selectedId}"
@@ -13,8 +14,13 @@ const TreeNodeComp = {
            @click.stop="$emit('select',node.id)"
            @mouseenter.stop="$emit('hover',node.id)"
            @mouseleave.stop="$emit('hover',null)">
+        <i v-if="node.children!==undefined" 
+           class="fa-solid fa-caret-down tree-node-toggle" 
+           :class="{collapsed: collapsed}"
+           @click.stop="collapsed = !collapsed"></i>
         <i class="tree-node-icon" :class="iconFor(node.type)"></i>
         <span class="tree-node-type">{{node.type.replace('mj-','')}}</span>
+
         <div class="node-classes">
           <span class="node-class-tag" v-for="c in (node.classes||[]).slice(0,2)" :key="c" :title="c">.{{c}}</span>
         </div>
@@ -25,7 +31,8 @@ const TreeNodeComp = {
       </div>
 
 
-      <div v-if="node.children!==undefined" class="tree-node-children">
+      <div v-if="node.children!==undefined && !collapsed" class="tree-node-children">
+
         <Draggable :list="node.children" 
                    :group="{
                      name: 'mjml',
