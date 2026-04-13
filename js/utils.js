@@ -129,24 +129,60 @@ function compileNode(node,depth){
 
 // ── Import helper ───────────────────────────────────────────
 function parseMjmlToTree(src){
-  const parser=new DOMParser();
-  const doc=parser.parseFromString(src,'application/xml');
-  if(doc.querySelector('parsererror')) throw new Error('Invalid XML/MJML.');
-  let _idCtr=1; const mkid=()=>'imp-'+(_idCtr++);
-  const TEXT_NODES=new Set(['mj-text','mj-button','mj-raw','mj-table','mj-social-element','mj-navbar-link']);
-  function parseEl(el){
-    const type=el.tagName; const cls=(el.getAttribute('mj-class')||'').split(' ').filter(Boolean);
-    const attrs={};for(const a of el.attributes){if(a.name!=='mj-class')attrs[a.name]=a.value;}
-    let content='',children=undefined;
-    if(TEXT_NODES.has(type))content=el.innerHTML;
-    else if(containerTypes.has(type)){children=[];for(const child of el.children){if(child.tagName.startsWith('mj-'))children.push(parseEl(child));}}
-    return {id:mkid(),type,classes:cls,attrs,content,children};
+  const parser = new DOMParser();
+  // Use text/html to be permissive with loose HTML tags (like <br> or <img>)
+  // that are common in MJML but invalid in strict XML.
+  const doc = parser.parseFromString(src, 'text/html');
+  
+  let _idCtr = 1; 
+  const mkid = () => 'imp-' + (_idCtr++);
+  
+  const TEXT_TYPES = ['mj-text','mj-button','mj-raw','mj-table','mj-social-element','mj-navbar-link'];
+  
+  function parseEl(el) {
+    const type = el.tagName.toLowerCase(); 
+    const cls = (el.getAttribute('mj-class') || '').split(' ').filter(Boolean);
+    const attrs = {};
+    for (const a of el.attributes) {
+      if (a.name !== 'mj-class') attrs[a.name] = a.value;
+    }
+    
+    let content = '', children = undefined;
+    
+    if (TEXT_TYPES.includes(type)) {
+      content = el.innerHTML;
+    } else {
+      children = [];
+      for (const child of el.children) {
+        if (child.tagName.toLowerCase().startsWith('mj-')) {
+          children.push(parseEl(child));
+        }
+      }
+    }
+    return { id: mkid(), type, classes: cls, attrs, content, children };
   }
-  const newClasses=[];
-  const attrsEl=doc.querySelector('mj-head > mj-attributes');
-  if(attrsEl){for(const c of attrsEl.querySelectorAll('mj-class')){const name=c.getAttribute('name');if(!name)continue;const props={};for(const a of c.attributes){if(a.name!=='name')props[a.name]=a.value;}newClasses.push({name,props,_open:false,_pk:'',_pv:''}); }}
-  const bodyEl=doc.querySelector('mj-body');
-  if(!bodyEl)throw new Error('No <mj-body> found in MJML.');
-  const bodyNode=parseEl(bodyEl);bodyNode.id='root';
-  return {tree:[bodyNode],newClasses};
+
+  const newClasses = [];
+  // Find mj-attributes anywhere (HTML parser might move them)
+  const attrsEl = doc.querySelector('mj-attributes');
+  if (attrsEl) {
+    for (const c of attrsEl.querySelectorAll('mj-class')) {
+      const name = c.getAttribute('name');
+      if (!name) continue;
+      const props = {};
+      for (const a of c.attributes) {
+        if (a.name !== 'name') props[a.name] = a.value;
+      }
+      newClasses.push({ name, props, _open: false, _pk: '', _pv: '' }); 
+    }
+  }
+
+  const bodyEl = doc.querySelector('mj-body');
+  if (!bodyEl) throw new Error('No <mj-body> found in MJML.');
+  
+  const bodyNode = parseEl(bodyEl);
+  bodyNode.id = 'root';
+  
+  return { tree: [bodyNode], newClasses };
 }
+

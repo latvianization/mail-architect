@@ -891,23 +891,75 @@ const app = createApp({
       ioMenuOpen.value = false;
       toast('MJML project downloaded');
     }
-    function triggerImport(){ ioMenuOpen.value=false;importErr.value='';if(importFileInput.value)importFileInput.value.click(); }
+    function triggerImport(){
+      ioMenuOpen.value = false;
+      importErr.value = '';
+      if (importFileInput.value) {
+        importFileInput.value.value = ''; // Reset to allow same file re-import
+        importFileInput.value.click();
+      } else {
+        console.error('importFileInput ref not found');
+        toast('Internal error: File input not found', false);
+      }
+    }
     function triggerWelcomeImport(){ welcomeOpen.value=false; triggerImport(); }
     function openImportModal(){ ioMenuOpen.value=false;importText.value='';importErr.value='';importOpen.value=true; welcomeOpen.value=false; }
-    function handleFileImport(e){ const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{importText.value=ev.target.result;importErr.value='';importOpen.value=true;welcomeOpen.value=false;};reader.readAsText(file);e.target.value=''; }
+    
+    function handleFileImport(e){ 
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = ev => {
+        importText.value = ev.target.result;
+        importErr.value = '';
+        importOpen.value = true;
+        welcomeOpen.value = false;
+        toast('File loaded, click Import to apply');
+      };
+      reader.onerror = () => {
+        toast('Error reading file', false);
+      };
+      reader.readAsText(file);
+    }
+
 
     function applyImport(){
-      importErr.value='';
-      try{
-        const {tree:newTree,newClasses}=parseMjmlToTree(importText.value);
-        tree.value=newTree;
-        if(newClasses.length>0)classes.value=newClasses;
-        selectedId.value=null;importOpen.value=false;importText.value='';
-        welcomeOpen.value=false;
-        undoStack.value=[]; redoStack.value=[]; pushUndoState();
-        toast('MJML imported!');setTimeout(renderPreview,200);
-      }catch(e){importErr.value=e.message;}
+      if (!importText.value.trim()) {
+        importErr.value = 'Please paste some MJML code first.';
+        return;
+      }
+      importErr.value = '';
+      try {
+        const {tree:newTree, newClasses} = parseMjmlToTree(importText.value);
+        if (!newTree || newTree.length === 0) {
+          throw new Error('No valid MJML structure found in input.');
+        }
+        
+        tree.value = newTree;
+        if (newClasses && newClasses.length > 0) {
+          classes.value = newClasses;
+        }
+        
+        selectedId.value = null;
+        importOpen.value = false;
+        importText.value = '';
+        welcomeOpen.value = false;
+        
+        // Reset undo stack for the new document
+        undoStack.value = [];
+        redoStack.value = [];
+        pushUndoState();
+        
+        toast('MJML project imported successfully!', true);
+        setTimeout(renderPreview, 300);
+      } catch(e) {
+        console.error('Import error:', e);
+        importErr.value = 'Import failed: ' + e.message;
+        toast('Import failed', false);
+      }
     }
+
 
     function openExport(){
       try{
@@ -1084,13 +1136,19 @@ const app = createApp({
       getPropNumeric, setPropNumeric, toggleSides, isSidesEnabled, getSidesValue, getSidesNumeric, setSidesNumeric,
       PROP_DEFS, PROP_CATEGORIES
     };
-  },
-  directives: { 'click-outside': (el, binding) => { /* placeholder if needed, using the const above */ } }
+  }
 }).directive('click-outside', {
   mounted(el, binding) {
-    el._clickOutside = (ev) => { if (!(el === ev.target || el.contains(ev.target))) binding.value(ev); };
+    el._clickOutside = (ev) => {
+      // If clicking exactly the same element or its children, ignore
+      if (el === ev.target || el.contains(ev.target)) return;
+      binding.value(ev);
+    };
     document.addEventListener('click', el._clickOutside);
   },
-  unmounted(el) { document.removeEventListener('click', el._clickOutside); }
+  unmounted(el) {
+    document.removeEventListener('click', el._clickOutside);
+  }
 });
+
 app.mount('#app');
