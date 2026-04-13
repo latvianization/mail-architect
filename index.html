@@ -452,6 +452,72 @@
     </div>
   </div>
 
+  <!-- ── Welcome Modal ────────────────────────────────────── -->
+  <div class="modal-overlay" v-if="welcomeOpen" style="z-index:2000">
+    <div class="modal-box welcome-box">
+      <div class="welcome-logo">
+        <i class="fa-solid fa-envelope-open-text"></i>
+      </div>
+      <h1 class="welcome-title">Welcome to MailArchitect</h1>
+      <p class="welcome-subtitle">A professional MJML email builder designed for speed and precision. How would you like to start today?</p>
+      
+      <div class="welcome-actions">
+        <!-- Continue Saved Session -->
+        <button class="welcome-btn primary" v-if="hasSavedEmail" @click="welcomeContinue">
+          <div class="welcome-btn-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
+          <div class="welcome-btn-text">
+            <span class="welcome-btn-name">Continue Previous Email</span>
+            <span class="welcome-btn-desc">Restore your last session from local storage.</span>
+          </div>
+          <i class="fa-solid fa-chevron-right ms-auto" style="opacity:0.3"></i>
+        </button>
+
+        <!-- Start New -->
+        <button class="welcome-btn" @click="welcomeNewEmail">
+          <div class="welcome-btn-icon"><i class="fa-solid fa-plus"></i></div>
+          <div class="welcome-btn-text">
+            <span class="welcome-btn-name">Start New Email</span>
+            <span class="welcome-btn-desc">Begin with a clean canvas and default styles.</span>
+          </div>
+          <i class="fa-solid fa-chevron-right ms-auto" style="opacity:0.3"></i>
+        </button>
+
+        <!-- Upload MJML -->
+        <button class="welcome-btn" @click="triggerWelcomeImport">
+          <div class="welcome-btn-icon"><i class="fa-solid fa-file-arrow-up" style="color:#10b981"></i></div>
+          <div class="welcome-btn-text">
+            <span class="welcome-btn-name">Upload .mjml File</span>
+            <span class="welcome-btn-desc">Import an existing project from your computer.</span>
+          </div>
+          <i class="fa-solid fa-chevron-right ms-auto" style="opacity:0.3"></i>
+        </button>
+
+        <!-- Paste Code -->
+        <button class="welcome-btn" @click="openImportModal">
+          <div class="welcome-btn-icon"><i class="fa-solid fa-paste"></i></div>
+          <div class="welcome-btn-text">
+            <span class="welcome-btn-name">Paste MJML Code</span>
+            <span class="welcome-btn-desc">Paste raw MJML source from your clipboard.</span>
+          </div>
+          <i class="fa-solid fa-chevron-right ms-auto" style="opacity:0.3"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── New Email Confirmation ────────────────────────────── -->
+  <div class="modal-overlay" v-if="confirmNewOpen" @click.self="confirmNewOpen=false" style="z-index:2100">
+    <div class="modal-box modal-sm confirm-box">
+      <div class="confirm-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+      <h3 class="confirm-title">Clear Current Work?</h3>
+      <p class="confirm-text">Starting a new email will discard all unsaved changes in your current project. This action cannot be undone.</p>
+      <div class="d-flex gap-2">
+        <button class="btn-outline-sm flex-grow-1" @click="confirmNewOpen=false">Cancel</button>
+        <button class="btn-export flex-grow-1" @click="executeNewEmail" style="background:#ef4444">Start Fresh</button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast-msg" :class="{show:toastShow, ok:toastSuccess}">{{toastMsg}}</div>
 </div>
 

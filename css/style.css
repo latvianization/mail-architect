@@ -61,10 +61,14 @@ body{
 }
 
 .btn-outline-sm{
-  padding:6px 12px;background:#fff;color:#475569;
+  padding:8px 16px;background:#fff;color:#475569;
   border:1px solid #e2e8f0;border-radius:8px;font-size:12px;
-  font-weight:600;cursor:pointer;
+  font-weight:700;cursor:pointer;transition:all 0.2s;
+  display:inline-flex;align-items:center;white-space:nowrap;
 }
+.btn-outline-sm:hover{border-color:#6366f1;color:#6366f1;box-shadow:0 2px 8px rgba(99,102,241,0.08)}
+.inline-create-form{display:flex;gap:8px;align-items:stretch}
+.inline-create-form .field-input{flex:1;min-width:0}
 
 /* IO Dropdown */
 .io-dropdown{
@@ -261,8 +265,33 @@ body.dragging .btn-add-inline{opacity:0.1;pointer-events:none}
 @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
 /* Toast */
-.toast-msg{bottom:32px;padding:14px 28px;border-radius:14px;font-size:14px;font-weight:600;background:#1e293b;color:#fff;box-shadow:0 15px 35px rgba(0,0,0,0.25)}
-.toast-msg.ok{background:#059669}
+.toast-msg {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  background: #1e293b;
+  color: #fff;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  z-index: 3000;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  width: max-content;
+  max-width: 90vw;
+}
+.toast-msg.show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+.toast-msg.ok {
+  background: #059669;
+}
 
 /* ── Visual Property Editor ───────────────────────────────────────── */
 .visual-editor { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
@@ -326,3 +355,64 @@ body.dragging .btn-add-inline{opacity:0.1;pointer-events:none}
   font-weight: 800; text-transform: uppercase; cursor: pointer; border-top: 1px solid #f1f5f9; margin-top: 16px;
 }
 .advanced-styles-toggle:hover { color: #64748b; }
+
+/* ── Modals & Overlays ────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+  background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000; animation: fadeInModal 0.3s ease-out;
+}
+@keyframes fadeInModal { from { opacity: 0; } to { opacity: 1; } }
+
+.modal-box {
+  background: #ffffff; border-radius: 20px; width: 90%; max-width: 500px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden; animation: slideUpModal 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex; flex-direction: column;
+}
+@keyframes slideUpModal { from { opacity: 0; transform: translateY(20px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+.modal-sm { max-width: 420px; }
+.modal-hdr { padding: 24px 24px 16px; display: flex; align-items: center; justify-content: space-between; }
+.modal-hdr-title { font-size: 18px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; display: flex; align-items: center; gap: 12px; }
+.modal-ftr { padding: 16px 24px 24px; display: flex; align-items: center; gap: 12px; background: #f8fafc; border-top: 1px solid #f1f5f9; }
+
+/* Welcome Screen Specifics */
+.welcome-box { max-width: 600px; padding: 40px; text-align: center; }
+.welcome-logo { 
+  width: 64px; height: 64px; background: linear-gradient(135deg, #4f46e5, #6366f1); 
+  border-radius: 16px; display: flex; align-items: center; justify-content: center; 
+  color: #fff; font-size: 32px; margin: 0 auto 24px; box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
+}
+.welcome-title { font-size: 28px; font-weight: 800; color: #0f172a; margin-bottom: 12px; letter-spacing: -1px; }
+.welcome-subtitle { font-size: 15px; color: #64748b; margin-bottom: 32px; line-height: 1.6; }
+
+.welcome-actions { display: grid; grid-template-columns: 1fr; gap: 12px; }
+.welcome-btn {
+  display: flex; align-items: center; gap: 16px; padding: 16px 20px;
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+  text-align: left; cursor: pointer; transition: all 0.2s;
+}
+.welcome-btn:hover { border-color: #6366f1; background: #f5f3ff; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(99, 102, 241, 0.08); }
+.welcome-btn.primary { background: #f5f3ff; border-color: #ddd6fe; }
+.welcome-btn.primary:hover { background: #ede9fe; border-color: #6366f1; }
+
+.welcome-btn-icon { 
+  width: 40px; height: 40px; border-radius: 10px; background: #f1f5f9; 
+  display: flex; align-items: center; justify-content: center; font-size: 18px; color: #6366f1;
+}
+.welcome-btn.primary .welcome-btn-icon { background: #fff; }
+.welcome-btn-text { flex: 1; }
+.welcome-btn-name { display: block; font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 2px; }
+.welcome-btn-desc { display: block; font-size: 12px; color: #64748b; }
+
+/* Confirmation Modals */
+.confirm-box { padding: 32px; text-align: center; }
+.confirm-icon { 
+  width: 56px; height: 56px; background: #fee2e2; color: #ef4444; 
+  border-radius: 50%; display: flex; align-items: center; justify-content: center; 
+  font-size: 24px; margin: 0 auto 20px; 
+}
+.confirm-title { font-size: 20px; font-weight: 800; color: #0f172a; margin-bottom: 12px; }
+.confirm-text { font-size: 14px; color: #64748b; margin-bottom: 24px; line-height: 1.5; }
