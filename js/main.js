@@ -1,7 +1,7 @@
 const { createApp, ref, reactive, computed, watch, onMounted, nextTick } = Vue;
 
 const app = createApp({
-  components:{'tree-node':TreeNodeComp, 'draggable': window.vuedraggable},
+  components:{'tree-node':TreeNodeComp, 'visual-editor': VisualEditorComp, 'draggable': window.vuedraggable},
   setup(){
     const deviceWidth   = ref('100%');
     const deviceLabel   = computed(()=>({'100%':'Desktop','768px':'Tablet 768px','414px':'Mobile L 414px','375px':'Mobile S 375px'}[deviceWidth.value]||deviceWidth.value));
@@ -255,50 +255,97 @@ const app = createApp({
 
     function isCategoryOpen(name) { return openCategories.value.includes(name); }
 
-    function getPropNumeric(cls, key) {
-      const val = cls.props[key] || '';
-      return parseFloat(val) || 0;
+    function getPropValue(cls, key, isDark = false) {
+      const source = isDark ? (cls.darkProps || {}) : cls.props;
+      let val = source[key];
+      if (isDark && val === undefined) {
+        val = cls.props[key] || '';
+      }
+      return val || '';
     }
 
-    function setPropNumeric(cls, key, val, unit='') {
-      cls.props[key] = val + unit;
+    function setPropValue(cls, key, val, isDark = false) {
+      if (isDark) {
+        if (!cls.darkProps) cls.darkProps = {};
+        cls.darkProps[key] = val;
+      } else {
+        cls.props[key] = val;
+      }
       scheduleRender();
     }
 
-    function toggleSides(cls, key) {
-      if(!cls._sides) cls._sides = {};
-      cls._sides[key] = !cls._sides[key];
+    function getPropNumeric(cls, key, isDark = false) {
+      const source = isDark ? (cls.darkProps || {}) : cls.props;
+      let val = source[key];
       
-      // If turning ON individual sides, initialize them from the main prop if they don't exist
-      if(cls._sides[key]) {
-        const baseVal = cls.props[key] || '0px';
+      // If dark mode and not set, use light mode value as reference
+      if (isDark && val === undefined) {
+        val = cls.props[key] || '';
+      }
+      return parseFloat(val || '') || 0;
+    }
+
+    function setPropNumeric(cls, key, val, unit='', isDark = false) {
+      if (isDark) {
+        if (!cls.darkProps) cls.darkProps = {};
+        cls.darkProps[key] = val + unit;
+      } else {
+        cls.props[key] = val + unit;
+      }
+      scheduleRender();
+    }
+
+    function toggleSides(cls, key, isDark = false) {
+      const source = isDark ? (cls.darkProps || {}) : cls.props;
+      if (isDark && !cls.darkProps) cls.darkProps = {};
+      
+      if(!cls._sides) cls._sides = {};
+      const sidesKey = isDark ? `${key}_dark` : key;
+      cls._sides[sidesKey] = !cls._sides[sidesKey];
+      
+      const targetSource = isDark ? cls.darkProps : cls.props;
+      
+      // If turning ON individual sides
+      if(cls._sides[sidesKey]) {
+        const baseVal = targetSource[key] || (isDark ? cls.props[key] : null) || '0px';
         ['top','right','bottom','left'].forEach(s => {
           const k = `${key}-${s}`;
-          if(!cls.props[k]) cls.props[k] = baseVal;
+          if(!targetSource[k]) targetSource[k] = baseVal;
         });
       } else {
-        // If turning OFF, remove individual sides to prevent conflicts
+        // If turning OFF
         ['top','right','bottom','left'].forEach(s => {
-          delete cls.props[`${key}-${s}`];
+          delete targetSource[`${key}-${s}`];
         });
       }
       scheduleRender();
     }
 
-    function isSidesEnabled(cls, key) {
-      return cls._sides && cls._sides[key];
+    function isSidesEnabled(cls, key, isDark = false) {
+      const sidesKey = isDark ? `${key}_dark` : key;
+      return cls._sides && cls._sides[sidesKey];
     }
 
-    function getSidesValue(cls, key, side) {
-      return cls.props[`${key}-${side}`] || '0px';
+    function getSidesValue(cls, key, side, isDark = false) {
+      const source = isDark ? (cls.darkProps || {}) : cls.props;
+      let val = source[`${key}-${side}`];
+      if (isDark && val === undefined) {
+        val = cls.props[`${key}-${side}`] || cls.props[key] || '0px';
+      }
+      return val || '0px';
     }
 
-    function getSidesNumeric(cls, key, side) {
-      return parseFloat(getSidesValue(cls, key, side)) || 0;
+    function getSidesNumeric(cls, key, side, isDark = false) {
+      return parseFloat(getSidesValue(cls, key, side, isDark)) || 0;
     }
 
-    function setSidesNumeric(cls, key, side, val, unit='px') {
-      cls.props[`${key}-${side}`] = val + unit;
+    function setSidesNumeric(cls, key, side, val, unit='px', isDark = false) {
+      if (isDark) {
+        if (!cls.darkProps) cls.darkProps = {};
+        cls.darkProps[`${key}-${side}`] = val + unit;
+      } else {
+        cls.props[`${key}-${side}`] = val + unit;
+      }
       scheduleRender();
     }
 
@@ -925,6 +972,12 @@ const app = createApp({
       showRawHtml,rteEl,linkInput,linkPop,execFmt,isFmt,startLink,applyLink,removeLink,removeLinkFromPopup,onRteInput,onRteClick,insertRteBr,
       leftW,treeW,rightW,startResize,
       showAdvanced, openCategories, toggleCategory, isCategoryOpen,
+      editorHelpers: {
+        getPropNumeric, setPropNumeric, getPropValue, setPropValue,
+        toggleSides, isSidesEnabled, getSidesValue, getSidesNumeric, setSidesNumeric,
+        isCategoryOpen, toggleCategory, colorToHex, scheduleRender
+      },
+      getPropValue, setPropValue,
       getPropNumeric, setPropNumeric, toggleSides, isSidesEnabled, getSidesValue, getSidesNumeric, setSidesNumeric,
       PROP_DEFS, PROP_CATEGORIES
     };
