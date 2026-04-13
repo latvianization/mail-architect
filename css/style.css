@@ -263,3 +263,66 @@ body.dragging .btn-add-inline{opacity:0.1;pointer-events:none}
 /* Toast */
 .toast-msg{bottom:32px;padding:14px 28px;border-radius:14px;font-size:14px;font-weight:600;background:#1e293b;color:#fff;box-shadow:0 15px 35px rgba(0,0,0,0.25)}
 .toast-msg.ok{background:#059669}
+
+/* ── Visual Property Editor ───────────────────────────────────────── */
+.visual-editor { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+.prop-category { border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: #fff; margin-bottom: 6px; }
+.prop-category-header { 
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #f8fafc; 
+  cursor: pointer; user-select: none; transition: background 0.2s;
+}
+.prop-category-header:hover { background: #f1f5f9; }
+.prop-category-title { font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; flex: 1; }
+.prop-category-icon { color: #6366f1; width: 14px; text-align: center; }
+.prop-category-arrow { color: #94a3b8; font-size: 10px; transition: transform 0.2s; }
+.prop-category.open .prop-category-arrow { transform: rotate(180deg); }
+.prop-category-body { padding: 12px; display: flex; flex-direction: column; gap: 14px; }
+
+.prop-control { display: flex; flex-direction: column; gap: 6px; }
+.prop-control-header { display: flex; align-items: center; justify-content: space-between; }
+.prop-control-label { font-size: 11px; font-weight: 700; color: #64748b; display: flex; align-items: center; gap: 8px; }
+.prop-control-label i { width: 14px; color: #94a3b8; font-size: 10px; text-align: center; }
+
+/* Custom Sliders */
+.prop-slider-wrap { display: flex; align-items: center; gap: 12px; }
+.prop-slider { 
+  flex: 1; -webkit-appearance: none; background: transparent; height: 20px; outline: none; margin: 0;
+}
+/* Track */
+.prop-slider::-webkit-slider-runnable-track {
+  width: 100%; height: 4px; background: #e2e8f0; border-radius: 10px; border: none;
+}
+/* Thumb */
+.prop-slider::-webkit-slider-thumb { 
+  -webkit-appearance: none; width: 16px; height: 16px; background: #6366f1; border-radius: 50%; 
+  cursor: pointer; border: 3px solid #fff; box-shadow: 0 2px 6px rgba(99,102,241,0.3); 
+  margin-top: -6px; transition: transform 0.1s;
+}
+.prop-slider::-webkit-slider-thumb:hover { transform: scale(1.1); }
+/* Firefox */
+.prop-slider::-moz-range-track { width: 100%; height: 4px; background: #e2e8f0; border-radius: 10px; }
+.prop-slider::-moz-range-thumb { width: 16px; height: 16px; background: #6366f1; border-radius: 50%; border: 3px solid #fff; cursor: pointer; }
+.prop-slider-val { 
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #6366f1; font-weight: 700; 
+  background: #f5f3ff; padding: 2px 6px; border-radius: 4px; min-width: 45px; text-align: center;
+}
+
+/* Sides Control (2x2 Grid) */
+.sides-toggle-wrap { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; cursor: pointer; }
+.sides-toggle-wrap input { accent-color: #6366f1; cursor: pointer; }
+.sides-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; animation: fadeIn 0.3s ease-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+.side-item { display: flex; flex-direction: column; gap: 4px; border: 1px solid #f1f5f9; padding: 6px; border-radius: 8px; background: #fcfcfc; }
+.side-label { font-size: 9px; font-weight: 800; color: #cbd5e1; text-transform: uppercase; }
+
+/* Color Picker Premium */
+.color-picker-wrap { position: relative; display: flex; align-items: center; gap: 10px; }
+.color-swatch-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid #e2e8f0; cursor: pointer; position: relative; overflow: hidden; }
+.color-swatch-btn input { position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+
+/* Advanced Section */
+.advanced-styles-toggle { 
+  display: flex; align-items: center; gap: 8px; padding: 12px; color: #94a3b8; font-size: 11px; 
+  font-weight: 800; text-transform: uppercase; cursor: pointer; border-top: 1px solid #f1f5f9; margin-top: 16px;
+}
+.advanced-styles-toggle:hover { color: #64748b; }

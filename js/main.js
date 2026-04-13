@@ -126,10 +126,10 @@ const app = createApp({
     // Classes
     const newClassName = ref('');
     const classes = ref([
-      {name:'body-bg',    props:{'background-color':'#f4f4f4'}, dark:true, darkProps:{'background-color':'#0d0d0d'}, _open:false,_pk:'',_pv:'',_dpk:'',_dpv:''},
-      {name:'text-default', props:{'color':'#1e293b', 'font-size':'14px', 'line-height':'1.6'}, dark:true, darkProps:{'color':'#ffffff'}, _open:false,_pk:'',_pv:'',_dpk:'',_dpv:''},
-      {name:'btn-primary', props:{'background-color':'#4f46e5', 'color':'#ffffff', 'font-weight':'bold', 'border-radius':'6px', 'padding':'12px 24px'}, dark:false, darkProps:{}, _open:false,_pk:'',_pv:'',_dpk:'',_dpv:''},
-      {name:'section-default', props:{'padding':'20px'}, dark:false, darkProps:{}, _open:false,_pk:'',_pv:'',_dpk:'',_dpv:''}
+      {name:'body-bg',    props:{'background-color':'#f4f4f4'}, dark:true, darkProps:{'background-color':'#0d0d0d'}, _open:false,_pk:'',_pv:'',_dpk:'',_dpv:'',_sides:{}},
+      {name:'text-default', props:{'color':'#1e293b', 'font-size':'14px', 'line-height':'1.6'}, dark:true, darkProps:{'color':'#ffffff'}, _open:false,_pk:'',_pv:'',_dpk:'',_dpv:'',_sides:{}},
+      {name:'btn-primary', props:{'background-color':'#4f46e5', 'color':'#ffffff', 'font-weight':'bold', 'border-radius':'6px', 'padding':'12px 24px'}, dark:false, darkProps:{}, _open:false,_pk:'',_pv:'',_dpk:'',_dpv:'',_sides:{}},
+      {name:'section-default', props:{'padding':'20px'}, dark:false, darkProps:{}, _open:false,_pk:'',_pv:'',_dpk:'',_dpv:'',_sides:{}}
     ]);
 
     // Document tree
@@ -240,6 +240,65 @@ const app = createApp({
       if (!cls.darkProps) cls.darkProps = {};
       if (!cls.darkProps[val]) cls.darkProps[val] = '';
       cls._showCustomDark = false;
+      scheduleRender();
+    }
+
+    // ── Visual Editor Helpers ─────────────────────────────────────
+    const showAdvanced = ref(false);
+    const openCategories = ref(['Typography', 'Spacing']);
+
+    function toggleCategory(name) {
+      const i = openCategories.value.indexOf(name);
+      if (i > -1) openCategories.value.splice(i, 1);
+      else openCategories.value.push(name);
+    }
+
+    function isCategoryOpen(name) { return openCategories.value.includes(name); }
+
+    function getPropNumeric(cls, key) {
+      const val = cls.props[key] || '';
+      return parseFloat(val) || 0;
+    }
+
+    function setPropNumeric(cls, key, val, unit='') {
+      cls.props[key] = val + unit;
+      scheduleRender();
+    }
+
+    function toggleSides(cls, key) {
+      if(!cls._sides) cls._sides = {};
+      cls._sides[key] = !cls._sides[key];
+      
+      // If turning ON individual sides, initialize them from the main prop if they don't exist
+      if(cls._sides[key]) {
+        const baseVal = cls.props[key] || '0px';
+        ['top','right','bottom','left'].forEach(s => {
+          const k = `${key}-${s}`;
+          if(!cls.props[k]) cls.props[k] = baseVal;
+        });
+      } else {
+        // If turning OFF, remove individual sides to prevent conflicts
+        ['top','right','bottom','left'].forEach(s => {
+          delete cls.props[`${key}-${s}`];
+        });
+      }
+      scheduleRender();
+    }
+
+    function isSidesEnabled(cls, key) {
+      return cls._sides && cls._sides[key];
+    }
+
+    function getSidesValue(cls, key, side) {
+      return cls.props[`${key}-${side}`] || '0px';
+    }
+
+    function getSidesNumeric(cls, key, side) {
+      return parseFloat(getSidesValue(cls, key, side)) || 0;
+    }
+
+    function setSidesNumeric(cls, key, side, val, unit='px') {
+      cls.props[`${key}-${side}`] = val + unit;
       scheduleRender();
     }
 
@@ -655,16 +714,37 @@ const app = createApp({
     function copyCode(){ navigator.clipboard.writeText(cleanMjmlSource.value).then(()=>toast('MJML copied!')); }
     function copyHtml(){ navigator.clipboard.writeText(exportHtml.value).then(()=>toast('HTML copied!')); }
     function downloadHtml(){
-      const a=document.createElement('a');
-      a.href='data:text/html;charset=utf-8,'+encodeURIComponent(exportHtml.value);
-      a.download='email.html';a.click();toast('Downloaded!');
+      try {
+        const fn = getMjml2Html();
+        const r = fn(cleanMjmlSource.value, {keepComments:false, validationLevel:'soft'});
+        let html = r.html;
+        html = stripDivTypography(html);
+        if(window.html_beautify) html = window.html_beautify(html, {indent_size:2, wrap_line_length:120});
+        
+        const blob = new Blob([html], {type:'text/html'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'email.html';
+        a.click();
+        URL.revokeObjectURL(url);
+        ioMenuOpen.value = false;
+        toast('HTML file downloaded');
+      } catch(e) {
+        toast('Error generating HTML: ' + e.message, false);
+      }
     }
     function exportMjml(){
-      const blob=new Blob([cleanMjmlSource.value],{type:'text/plain'});
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement('a');
-      a.href=url;a.download='email-template.mjml';a.click();
-      URL.revokeObjectURL(url);ioMenuOpen.value=false;toast('MJML downloaded!');
+      const mj = cleanMjmlSource.value;
+      const blob = new Blob([mj], {type:'text/xml'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'email-project.mjml';
+      a.click();
+      URL.revokeObjectURL(url);
+      ioMenuOpen.value = false;
+      toast('MJML project downloaded');
     }
     function triggerImport(){ ioMenuOpen.value=false;importErr.value='';if(importFileInput.value)importFileInput.value.click(); }
     function triggerWelcomeImport(){ welcomeOpen.value=false; triggerImport(); }
@@ -762,30 +842,6 @@ const app = createApp({
       toast('Started new email');
     }
 
-    function downloadHtml(){
-      const html = mjmlSource.value; 
-      const blob = new Blob([html], {type:'text/html'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'email-export.html';
-      a.click();
-      URL.revokeObjectURL(url);
-      ioMenuOpen.value = false;
-      toast('HTML file downloaded');
-    }
-    function exportMjml(){
-      const mj = cleanMjmlSource.value;
-      const blob = new Blob([mj], {type:'text/xml'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'email-project.mjml';
-      a.click();
-      URL.revokeObjectURL(url);
-      ioMenuOpen.value = false;
-      toast('MJML project downloaded');
-    }
 
     // ── Panel resize ─────────────────────────────────────────
     const leftW = ref(parseInt(localStorage.getItem('mb-leftW'))||120);
@@ -868,6 +924,9 @@ const app = createApp({
       prevSel,openLinkFromPreview,
       showRawHtml,rteEl,linkInput,linkPop,execFmt,isFmt,startLink,applyLink,removeLink,removeLinkFromPopup,onRteInput,onRteClick,insertRteBr,
       leftW,treeW,rightW,startResize,
+      showAdvanced, openCategories, toggleCategory, isCategoryOpen,
+      getPropNumeric, setPropNumeric, toggleSides, isSidesEnabled, getSidesValue, getSidesNumeric, setSidesNumeric,
+      PROP_DEFS, PROP_CATEGORIES
     };
   },
   directives: { 'click-outside': (el, binding) => { /* placeholder if needed, using the const above */ } }

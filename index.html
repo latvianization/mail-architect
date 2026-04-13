@@ -41,7 +41,6 @@
       <div class="vd"></div>
 
       <div class="tool-group">
-        <button class="tool-btn" @click="promptNewEmail" title="New Email"><i class="fa-regular fa-file"></i></button>
         <button class="tool-btn" @click="undo" :disabled="!canUndo" :style="{opacity:!canUndo?0.4:1}"><i class="fa-solid fa-rotate-left"></i></button>
         <button class="tool-btn" @click="redo" :disabled="!canRedo" :style="{opacity:!canRedo?0.4:1}"><i class="fa-solid fa-rotate-right"></i></button>
       </div>
@@ -59,7 +58,7 @@
       <!-- Export / Import -->
       <div class="io-wrap" style="position:relative">
         <div class="btn-group">
-          <button class="btn-export" @click="openExport"><i class="fa-solid fa-paper-plane me-1"></i> Get HTML</button>
+          <button class="btn-export" @click="downloadHtml"><i class="fa-solid fa-paper-plane me-1"></i> Get HTML</button>
           <button class="btn-export ps-2 pe-3" style="border-left:1px solid rgba(255,255,255,0.2)" @click.stop="ioMenuOpen=!ioMenuOpen">
             <i class="fa-solid fa-chevron-down ms-1" style="font-size:10px"></i>
           </button>
@@ -254,36 +253,120 @@
                 <i class="fa-solid fa-sliders" style="opacity:0.4"></i>
               </div>
               <div class="p-2 bg-white">
-                <div v-for="(v,k) in getClassObj(cname).props" :key="k" class="prop-row">
-                  <span class="prop-key">{{k}}</span>
-                  <label class="color-swatch-wrap" v-if="isColorProp(k)">
-                    <span class="color-swatch" :style="{background:v}"></span>
-                    <input type="color" :value="colorToHex(v)" @input="getClassObj(cname).props[k]=$event.target.value; scheduleRender()">
-                  </label>
-                  <input class="prop-val" v-model="getClassObj(cname).props[k]" @input="scheduleRender()">
-                  <button class="prop-del" @click="deleteProp(getClassObj(cname),k)"><i class="fa-solid fa-xmark"></i></button>
-                </div>
+                <!-- Visual Property Editor -->
+                <div class="visual-editor">
+                  <div v-for="cat in PROP_CATEGORIES" :key="cat.name" class="prop-category" :class="{open: isCategoryOpen(cat.name)}">
+                    <div class="prop-category-header" @click="toggleCategory(cat.name)">
+                      <i class="fa-solid prop-category-icon" :class="cat.icon"></i>
+                      <span class="prop-category-title">{{cat.name}}</span>
+                      <i class="fa-solid fa-chevron-down prop-category-arrow"></i>
+                    </div>
+                    <div class="prop-category-body" v-if="isCategoryOpen(cat.name)">
+                      <div v-for="pkey in cat.props" :key="pkey" class="prop-control">
+                        <template v-if="PROP_DEFS[pkey]">
+                          <div class="prop-control-header">
+                            <span class="prop-control-label">
+                              <i class="fa-solid" :class="PROP_DEFS[pkey].icon"></i>
+                              {{pkey}}
+                            </span>
+                            <!-- Sides Toggle -->
+                            <label v-if="PROP_DEFS[pkey].type==='sides'" class="sides-toggle-wrap">
+                              <input type="checkbox" :checked="isSidesEnabled(getClassObj(cname), pkey)" @change="toggleSides(getClassObj(cname), pkey)">
+                              Individual
+                            </label>
+                          </div>
 
-                <label class="dark-toggle mt-2">
-                  <input type="checkbox" v-model="getClassObj(cname).dark"> <span class="ms-1">Dark Mode Override</span>
-                </label>
-                <div class="dark-section" v-if="getClassObj(cname).dark">
-                  <div class="prop-row" v-for="(v,k) in (getClassObj(cname).darkProps || {})" :key="'dark-'+k">
-                    <span class="prop-key">{{k}}</span>
-                    <input class="prop-val" v-model="getClassObj(cname).darkProps[k]" @input="scheduleRender()">
-                    <button class="prop-del" @click="deleteDarkProp(getClassObj(cname),k)"><i class="fa-solid fa-xmark"></i></button>
+                          <!-- Slider Type -->
+                          <div v-if="PROP_DEFS[pkey].type==='slider'" class="prop-slider-wrap">
+                            <input type="range" class="prop-slider" 
+                                   :min="PROP_DEFS[pkey].min" :max="PROP_DEFS[pkey].max" :step="PROP_DEFS[pkey].step||1"
+                                   :value="getPropNumeric(getClassObj(cname), pkey)"
+                                   @input="setPropNumeric(getClassObj(cname), pkey, $event.target.value, PROP_DEFS[pkey].unit)">
+                            <span class="prop-slider-val">{{getPropNumeric(getClassObj(cname), pkey)}}{{PROP_DEFS[pkey].unit}}</span>
+                          </div>
+
+                          <!-- Select Type -->
+                          <select v-else-if="PROP_DEFS[pkey].type==='select'" class="field-select" 
+                                  :value="getClassObj(cname).props[pkey]"
+                                  @change="getClassObj(cname).props[pkey]=$event.target.value; scheduleRender()">
+                            <option v-for="opt in PROP_DEFS[pkey].options" :key="opt" :value="opt">{{opt}}</option>
+                          </select>
+
+                          <!-- Color Type -->
+                          <div v-else-if="PROP_DEFS[pkey].type==='color'" class="color-picker-wrap">
+                            <div class="color-swatch-btn" :style="{background:getClassObj(cname).props[pkey]||'#000'}">
+                              <input type="color" :value="colorToHex(getClassObj(cname).props[pkey]||'#000000')" 
+                                     @input="getClassObj(cname).props[pkey]=$event.target.value; scheduleRender()">
+                            </div>
+                            <input class="field-input py-1" v-model="getClassObj(cname).props[pkey]" @input="scheduleRender()">
+                          </div>
+
+                          <!-- Sides Type -->
+                          <div v-else-if="PROP_DEFS[pkey].type==='sides'">
+                            <div v-if="!isSidesEnabled(getClassObj(cname), pkey)" class="prop-slider-wrap">
+                              <input type="range" class="prop-slider" 
+                                     :min="PROP_DEFS[pkey].min" :max="PROP_DEFS[pkey].max"
+                                     :value="getPropNumeric(getClassObj(cname), pkey)"
+                                     @input="setPropNumeric(getClassObj(cname), pkey, $event.target.value, PROP_DEFS[pkey].unit)">
+                              <span class="prop-slider-val">{{getPropNumeric(getClassObj(cname), pkey)}}{{PROP_DEFS[pkey].unit}}</span>
+                            </div>
+                            <div v-else class="sides-grid">
+                              <div v-for="s in ['top','right','bottom','left']" :key="s" class="side-item">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                  <span class="side-label">{{s}}</span>
+                                  <span class="side-val" style="font-size:9px; font-weight:700; color:#6366f1">{{getSidesNumeric(getClassObj(cname), pkey, s)}}</span>
+                                </div>
+                                <input type="range" class="prop-slider mini" 
+                                       :min="PROP_DEFS[pkey].min" :max="PROP_DEFS[pkey].max"
+                                       :value="getSidesNumeric(getClassObj(cname), pkey, s)"
+                                       @input="setSidesNumeric(getClassObj(cname), pkey, s, $event.target.value, PROP_DEFS[pkey].unit)">
+                              </div>
+                            </div>
+                          </div>
+                        </template>
+                      </div>
+                    </div>
                   </div>
-                  <select class="field-select py-1 mt-1" @change="addDarkPropImmediate(getClassObj(cname), $event.target.value); $event.target.value=''">
-                    <option value="">+ Add Dark Override…</option>
-                    <option v-for="p in propSuggestions" :key="'dp-'+p" :value="p">{{p}}</option>
-                  </select>
                 </div>
 
-                <div class="mt-2 pt-1 border-top">
-                  <select class="field-select py-1" @change="addPropImmediate(getClassObj(cname), $event.target.value); $event.target.value=''">
-                    <option value="">+ Add Property Style…</option>
-                    <option v-for="p in propSuggestions" :key="p" :value="p">{{p}}</option>
-                  </select>
+                <!-- Advanced Styles Section -->
+                <div class="advanced-styles-toggle" @click="showAdvanced=!showAdvanced">
+                  <i class="fa-solid" :class="showAdvanced?'fa-chevron-up':'fa-chevron-down'"></i>
+                  Advanced Properties (Raw)
+                </div>
+
+                <div v-if="showAdvanced" class="mt-2 p-2 border-top bg-light rounded shadow-sm">
+                  <div v-for="(v,k) in getClassObj(cname).props" :key="k" class="prop-row">
+                    <span class="prop-key">{{k}}</span>
+                    <label class="color-swatch-wrap" v-if="isColorProp(k)">
+                      <span class="color-swatch" :style="{background:v}"></span>
+                      <input type="color" :value="colorToHex(v)" @input="getClassObj(cname).props[k]=$event.target.value; scheduleRender()">
+                    </label>
+                    <input class="prop-val" v-model="getClassObj(cname).props[k]" @input="scheduleRender()">
+                    <button class="prop-del" @click="deleteProp(getClassObj(cname),k)"><i class="fa-solid fa-xmark"></i></button>
+                  </div>
+
+                  <label class="dark-toggle mt-2">
+                    <input type="checkbox" v-model="getClassObj(cname).dark"> <span class="ms-1">Dark Mode Override</span>
+                  </label>
+                  <div class="dark-section" v-if="getClassObj(cname).dark">
+                    <div class="prop-row" v-for="(v,k) in (getClassObj(cname).darkProps || {})" :key="'dark-'+k">
+                      <span class="prop-key">{{k}}</span>
+                      <input class="prop-val" v-model="getClassObj(cname).darkProps[k]" @input="scheduleRender()">
+                      <button class="prop-del" @click="deleteDarkProp(getClassObj(cname),k)"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <select class="field-select py-1 mt-1" @change="addDarkPropImmediate(getClassObj(cname), $event.target.value); $event.target.value=''">
+                      <option value="">+ Add Dark Override…</option>
+                      <option v-for="p in propSuggestions" :key="'dp-'+p" :value="p">{{p}}</option>
+                    </select>
+                  </div>
+
+                  <div class="mt-2 pt-1 border-top">
+                    <select class="field-select py-1" @change="addPropImmediate(getClassObj(cname), $event.target.value); $event.target.value=''">
+                      <option value="">+ Add Property Style…</option>
+                      <option v-for="p in propSuggestions" :key="p" :value="p">{{p}}</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>
