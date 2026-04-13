@@ -180,9 +180,97 @@ const templateLib = [
       const title = makeNode('mj-text');
       title.content = '<strong>Product Name</strong><br/><span style="color:#6366f1;font-size:18px">$49.00</span>';
       const btn = makeNode('mj-button');
-      column.children = [img, title, btn];
       section.children = [column];
       return section;
     }
+  },
+  {
+    name: 'Icon Feature',
+    type: 'tmpl-icon-text',
+    icon: 'fa-solid fa-star',
+    desc: 'Horizontal layout with icon on left and text on right. Stacks on mobile.',
+    build: () => {
+      const section = makeNode('mj-section');
+      const colIcon = makeNode('mj-column');
+      colIcon.attrs.width = '20%';
+      const img = makeNode('mj-image');
+      img.attrs.src = 'https://cdn.pixabay.com/photo/2016/09/30/14/08/gear-1705353_1280.png';
+      img.attrs.width = '40px';
+      colIcon.children = [img];
+      
+      const colText = makeNode('mj-column');
+      colText.attrs.width = '80%';
+      const txt = makeNode('mj-text');
+      txt.content = '<strong>Feature Title</strong><br/>Description of your amazing service goes right here.';
+      colText.children = [txt];
+      
+      section.children = [colIcon, colText];
+      return section;
+    }
+  },
+  {
+    name: '3-Col Services',
+    type: 'tmpl-3col-grid',
+    icon: 'fa-solid fa-border-none',
+    desc: 'Three vertical columns with icons, perfect for features or USPs.',
+    build: () => {
+      const section = makeNode('mj-section');
+      const createService = (label) => {
+        const col = makeNode('mj-column');
+        const img = makeNode('mj-image');
+        img.attrs.src = 'https://cdn-icons-png.flaticon.com/512/1160/1160358.png';
+        img.attrs.width = '50px';
+        const txt = makeNode('mj-text');
+        txt.attrs.align = 'center';
+        txt.content = `<strong>${label}</strong><br/>Summary text.`;
+        col.children = [img, txt];
+        return col;
+      };
+      section.children = [createService('Quality'), createService('Speed'), createService('Support')];
+      return section;
+    }
+  },
+  {
+    name: 'Promo Hero',
+    type: 'tmpl-promo-hero',
+    icon: 'fa-solid fa-rectangle-ad',
+    desc: 'Large hero with background, headline, and primary call to action.',
+    build: () => {
+      const wrapper = makeNode('mj-wrapper');
+      wrapper.style['padding'] = '0px';
+      
+      const hero = makeNode('mj-hero');
+      hero.attrs.mode = 'fixed-height';
+      hero.attrs['height'] = '450px';
+      hero.attrs['background-url'] = 'https://images.unsplash.com/photo-1557683316-973673baf926?w=800';
+      hero.attrs['background-color'] = '#4f46e5';
+      hero.attrs['padding'] = '100px 0px';
+      
+      const col = makeNode('mj-column');
+      const title = makeNode('mj-text');
+      title.attrs.align = 'center';
+      title.attrs.color = '#ffffff';
+      title.attrs['font-size'] = '42px';
+      title.attrs['font-weight'] = '800';
+      title.content = 'Limited Time Offer';
+      
+      const sub = makeNode('mj-text');
+      sub.attrs.align = 'center';
+      sub.attrs.color = '#ffffff';
+      sub.attrs['font-size'] = '18px';
+      sub.content = 'Save up to 50% on all new collections.';
+      
+      const btn = makeNode('mj-button');
+      btn.attrs['background-color'] = '#ffffff';
+      btn.attrs.color = '#4f46e5';
+      btn.attrs['font-weight'] = '700';
+      btn.content = 'Shop Now';
+      
+      col.children = [title, sub, btn];
+      hero.children = [col];
+      wrapper.children = [hero];
+      return wrapper;
+    }
   }
 ];
+

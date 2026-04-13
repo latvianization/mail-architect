@@ -5,6 +5,10 @@ This file serves as a persistent context for AI agents working on this repositor
 > [!IMPORTANT]
 > **AI AGENT REQUIREMENT**: Read this file on every request. Update this file whenever significant architectural changes, new features, or important patterns are introduced.
 
+
+> [!IMPORTANT]
+> **AI AGENT REQUIREMENT**: Do not open browser to check the app. Use the provided context and code to understand the current state.
+
 ## Project Overview
 **MailArchitect** is a professional MJML-based email builder built with Vue 3. It features:
 - Drag-and-drop structural building.

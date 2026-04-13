@@ -525,11 +525,21 @@
           <button class="detail-btn-add" @click="addBlockPop.tab==='blocks' ? addBlockFromPopup(popupHoveredDetail.type) : addTemplateFromPopup(popupHoveredDetail.type)">
             <i class="fa-solid fa-plus me-2"></i> Add {{popupHoveredDetail.name}}
           </button>
-
+          
+          <div class="gallery-preview-wrap mt-auto">
+            <div class="gallery-preview-lbl">Visual Preview</div>
+            <div class="gallery-preview-frame-wrap" v-if="hoveredPreviewHtml">
+              <iframe class="gallery-preview-frame" :srcdoc="hoveredPreviewHtml"></iframe>
+            </div>
+            <div class="gallery-preview-placeholder" v-else>
+              <i class="fa-solid fa-spinner fa-spin"></i>
+            </div>
+          </div>
         </template>
         <template v-else>
           <div class="text-muted">Hover over a component to see details</div>
         </template>
+
       </div>
     </div>
   </div>

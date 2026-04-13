@@ -16,6 +16,8 @@ const app = createApp({
     const previewFrame  = ref(null);
     const previewWrap   = ref(null);
     const previewHeight = ref(600);
+    const hoveredPreviewHtml = ref('');
+
     const compileError  = ref(false);
 
     // Export
@@ -55,9 +57,43 @@ const app = createApp({
     function closeIoMenu(e){ if(!e.target.closest('#io-wrap')) ioMenuOpen.value=false; }
     onMounted(()=>document.addEventListener('click',closeIoMenu));
 
-    // Context from localStorage
-    const SAVE_KEY='mailarchitect_v1';
+    function getPreviewMjml(node) {
+      if (!node) return '';
+      const body = compileNode(node, 0);
+      return `<mjml><mj-body>${body}</mj-body></mjml>`;
+    }
+
+    let previewTimer = null;
+    watch(() => addBlockPop.hoveredType, (newType) => {
+      if (!newType) { hoveredPreviewHtml.value = ''; return; }
+      if (previewTimer) clearTimeout(previewTimer);
+      
+      previewTimer = setTimeout(() => {
+        try {
+          let node;
+          if (addBlockPop.tab === 'templates') {
+            const tmpl = templateLib.find(t => t.type === newType);
+            if (tmpl) node = tmpl.build();
+          } else {
+            node = makeNode(newType);
+          }
+          
+          if (node) {
+            const mjml = getPreviewMjml(node);
+            const fn = getMjml2Html();
+            const r = fn(mjml, { validationLevel: 'skip' });
+            hoveredPreviewHtml.value = r.html;
+          }
+        } catch (e) {
+          console.error('Preview error:', e);
+          hoveredPreviewHtml.value = '';
+        }
+      }, 100);
+    });
+
+    const SAVE_KEY = 'mailarchitect_v1';
     let savedStateCache = null;
+
 
     // Welcome & New Email Data
     const welcomeOpen = ref(true);
@@ -1043,11 +1079,15 @@ const app = createApp({
           classes:classes.value,
           ts:Date.now()
         }));
-      }catch{}
+        console.log('[MailArchitect] Progress auto-saved');
+      }catch(e){ console.warn('Save failed:', e); }
     }
-    function scheduleSave(){ if(saveTimer)clearTimeout(saveTimer); saveTimer=setTimeout(saveNow,1500); }
-    watch([tree,classes],scheduleSave,{deep:true});
-    watch([tree,classes],scheduleUndoPush,{deep:true});
+    function scheduleSave(){ if(saveTimer)clearTimeout(saveTimer); saveTimer=setTimeout(saveNow,1000); }
+    
+    // More robust watch for deep mutations
+    watch(() => [tree.value, classes.value], scheduleSave, {deep:true});
+    watch(() => [tree.value, classes.value], scheduleUndoPush, {deep:true});
+
 
     function ensureStyleRefs(nodeList) {
       if (!nodeList) return;
@@ -1157,8 +1197,11 @@ const app = createApp({
         }
       }catch{}
 
+      window.addEventListener('beforeunload', saveNow);
+      
       setTimeout(renderPreview,900);
     });
+
 
     return {
       welcomeOpen,welcomeContinue,welcomeNewEmail,triggerWelcomeImport,
@@ -1189,7 +1232,8 @@ const app = createApp({
       showAdvanced, showAdvancedInline, openCategories, toggleCategory, isCategoryOpen,
 
       addBlockPop, openAddBlock, closeAddBlock, addBlockFromPopup, addTemplateFromPopup, duplicateNode,
-      popupAllowedTypes, popupHoveredDetail,
+      popupAllowedTypes, popupHoveredDetail, hoveredPreviewHtml,
+
 
 
       editorHelpers: {
