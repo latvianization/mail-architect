@@ -8,6 +8,9 @@ const app = createApp({
     const previewTheme  = ref('light');
     const viewMode      = ref('builder');
     const showGuides    = ref(false);
+    const showAdvanced  = ref(false);
+    const showAdvancedInline = ref(false);
+
     const tab           = ref('node');
     const selectedId    = ref(null);
     const previewFrame  = ref(null);
@@ -160,7 +163,16 @@ const app = createApp({
     function removeNode(nodes,target){ const i=nodes.findIndex(n=>n.id===target.id);if(i>-1){nodes.splice(i,1);return true;} for(const n of nodes){if(n.children&&removeNode(n.children,target))return true;} return false; }
 
     function selectNode(id){ selectedId.value=id; tab.value='node'; }
-    function deleteNode(n){ if(selectedId.value===n.id)selectedId.value=null; removeNode(tree.value,n); }
+    function deleteNode(n){ 
+      if (n.type === 'mj-body') {
+        n.children = [];
+        toast('Cleared all components');
+        return;
+      }
+      if(selectedId.value===n.id)selectedId.value=null; 
+      removeNode(tree.value,n); 
+    }
+
 
     // Add Block methods
     function openAddBlock(parentId, parentType) {
@@ -342,7 +354,7 @@ const app = createApp({
     }
 
     // ── Visual Editor Helpers ─────────────────────────────────────
-    const showAdvanced = ref(false);
+
     const openCategories = ref(['Typography', 'Spacing']);
 
     function toggleCategory(name) {
@@ -353,65 +365,70 @@ const app = createApp({
 
     function isCategoryOpen(name) { return openCategories.value.includes(name); }
 
-    function getPropValue(cls, key, isDark = false) {
-      const source = isDark ? (cls.darkProps || {}) : cls.props;
+    function getPropValue(obj, key, isDark = false) {
+      if (!obj) return '';
+      const source = isDark ? (obj.darkProps || {}) : (obj.props || obj.style || obj);
       let val = source[key];
       if (isDark && val === undefined) {
-        val = cls.props[key] || '';
+        val = (obj.props || obj.style || obj)[key] || '';
       }
       return val || '';
     }
 
-    function setPropValue(cls, key, val, isDark = false) {
+
+    function setPropValue(obj, key, val, isDark = false) {
+      if (!obj) return;
       if (isDark) {
-        if (!cls.darkProps) cls.darkProps = {};
-        cls.darkProps[key] = val;
+        if (!obj.darkProps) obj.darkProps = {};
+        obj.darkProps[key] = val;
       } else {
-        cls.props[key] = val;
+        const target = obj.props || obj.style || obj;
+        target[key] = val;
       }
       scheduleRender();
     }
 
-    function getPropNumeric(cls, key, isDark = false) {
-      const source = isDark ? (cls.darkProps || {}) : cls.props;
+
+    function getPropNumeric(obj, key, isDark = false) {
+      if (!obj) return 0;
+      const source = isDark ? (obj.darkProps || {}) : (obj.props || obj.style || obj);
       let val = source[key];
-      
-      // If dark mode and not set, use light mode value as reference
       if (isDark && val === undefined) {
-        val = cls.props[key] || '';
+        val = (obj.props || obj.style || obj)[key] || '';
       }
       return parseFloat(val || '') || 0;
     }
 
-    function setPropNumeric(cls, key, val, unit='', isDark = false) {
+    function setPropNumeric(obj, key, val, unit='', isDark = false) {
+      if (!obj) return;
       if (isDark) {
-        if (!cls.darkProps) cls.darkProps = {};
-        cls.darkProps[key] = val + unit;
+        if (!obj.darkProps) obj.darkProps = {};
+        obj.darkProps[key] = val + unit;
       } else {
-        cls.props[key] = val + unit;
+        const target = obj.props || obj.style || obj;
+        target[key] = val + unit;
       }
       scheduleRender();
     }
 
-    function toggleSides(cls, key, isDark = false) {
-      const source = isDark ? (cls.darkProps || {}) : cls.props;
-      if (isDark && !cls.darkProps) cls.darkProps = {};
+    function toggleSides(obj, key, isDark = false) {
+      if (!obj) return;
+      const source = isDark ? (obj.darkProps || {}) : (obj.props || obj.style || obj);
+      if (isDark && !obj.darkProps) obj.darkProps = {};
       
-      if(!cls._sides) cls._sides = {};
+      if(!obj._sides) obj._sides = {};
       const sidesKey = isDark ? `${key}_dark` : key;
-      cls._sides[sidesKey] = !cls._sides[sidesKey];
+      obj._sides[sidesKey] = !obj._sides[sidesKey];
       
-      const targetSource = isDark ? cls.darkProps : cls.props;
+      const targetSource = isDark ? obj.darkProps : (obj.props || obj.style || obj);
       
-      // If turning ON individual sides
-      if(cls._sides[sidesKey]) {
-        const baseVal = targetSource[key] || (isDark ? cls.props[key] : null) || '0px';
+      if(obj._sides[sidesKey]) {
+        const baseVal = targetSource[key] || (isDark ? (obj.props || obj.style || obj)[key] : null) || '0px';
         ['top','right','bottom','left'].forEach(s => {
           const k = `${key}-${s}`;
           if(!targetSource[k]) targetSource[k] = baseVal;
         });
       } else {
-        // If turning OFF
         ['top','right','bottom','left'].forEach(s => {
           delete targetSource[`${key}-${s}`];
         });
@@ -419,37 +436,54 @@ const app = createApp({
       scheduleRender();
     }
 
-    function isSidesEnabled(cls, key, isDark = false) {
+    function isSidesEnabled(obj, key, isDark = false) {
+      if (!obj) return false;
       const sidesKey = isDark ? `${key}_dark` : key;
-      return cls._sides && cls._sides[sidesKey];
+      return obj._sides && obj._sides[sidesKey];
     }
 
-    function getSidesValue(cls, key, side, isDark = false) {
-      const source = isDark ? (cls.darkProps || {}) : cls.props;
+    function getSidesValue(obj, key, side, isDark = false) {
+      if (!obj) return '0px';
+      const source = isDark ? (obj.darkProps || {}) : (obj.props || obj.style || obj);
       let val = source[`${key}-${side}`];
       if (isDark && val === undefined) {
-        val = cls.props[`${key}-${side}`] || cls.props[key] || '0px';
+        const base = (obj.props || obj.style || obj);
+        val = base[`${key}-${side}`] || base[key] || '0px';
       }
       return val || '0px';
     }
 
-    function getSidesNumeric(cls, key, side, isDark = false) {
-      return parseFloat(getSidesValue(cls, key, side, isDark)) || 0;
+    function getSidesNumeric(obj, key, side, isDark = false) {
+      return parseFloat(getSidesValue(obj, key, side, isDark)) || 0;
     }
 
-    function setSidesNumeric(cls, key, side, val, unit='px', isDark = false) {
+    function setSidesNumeric(obj, key, side, val, unit='px', isDark = false) {
+      if (!obj) return;
       if (isDark) {
-        if (!cls.darkProps) cls.darkProps = {};
-        cls.darkProps[`${key}-${side}`] = val + unit;
+        if (!obj.darkProps) obj.darkProps = {};
+        obj.darkProps[`${key}-${side}`] = val + unit;
       } else {
-        cls.props[`${key}-${side}`] = val + unit;
+        const target = obj.props || obj.style || obj;
+        target[key] = val + unit;
       }
       scheduleRender();
     }
 
+
     // Node helpers
     function nodeHasContent(type){ return['mj-text','mj-button','mj-raw','mj-table','mj-navbar-link','mj-social-element'].includes(type); }
     function stdAttrs(type){ return stdAttrMap[type]||[]; }
+
+    function addInlineProp(node, key) {
+      if (!node.style) node.style = {};
+      if (!node.style[key]) node.style[key] = '';
+      scheduleRender();
+    }
+    function deleteInlineProp(node, key) {
+      if (node.style) delete node.style[key];
+      scheduleRender();
+    }
+
 
     const mjmlSource = computed(()=>{
       // mj-attributes block
@@ -996,13 +1030,23 @@ const app = createApp({
     watch([tree,classes],scheduleSave,{deep:true});
     watch([tree,classes],scheduleUndoPush,{deep:true});
 
+    function ensureStyleRefs(nodeList) {
+      if (!nodeList) return;
+      for (const n of nodeList) {
+        if (!n.style) n.style = {};
+        if (n.children) ensureStyleRefs(n.children);
+      }
+    }
+
     function welcomeContinue() {
       if (savedStateCache) {
+        ensureStyleRefs(savedStateCache.tree);
         tree.value = savedStateCache.tree;
         if(savedStateCache.classes) classes.value = savedStateCache.classes;
         undoStack.value = [];
         redoStack.value = [];
         pushUndoState();
+
       }
       welcomeOpen.value = false;
       toast('Restored previous session', true);
@@ -1021,7 +1065,7 @@ const app = createApp({
     }
 
     function executeNewEmail() {
-      tree.value = [{id:'root',type:'mj-body',classes:['body-bg'],attrs:{},content:'',children:[]}];
+      tree.value = [{id:'root',type:'mj-body',classes:['body-bg'],attrs:{},style:{},content:'',children:[]}];
       classes.value = [
         {name:'body-bg',    props:{'background-color':'#f4f4f4'}, _open:false,_pk:'',_pv:''},
         {name:'text-default', props:{'color':'#1e293b', 'font-size':'14px', 'line-height':'1.6'}, _open:false,_pk:'',_pv:''},
@@ -1031,6 +1075,7 @@ const app = createApp({
       undoStack.value = [];
       redoStack.value = [];
       pushUndoState();
+
       try{ localStorage.removeItem(SAVE_KEY); }catch{}
       hasSavedEmail.value = false;
       savedStateCache = null;
@@ -1109,7 +1154,8 @@ const app = createApp({
       cloneNode,selectNode,deleteNode,clearDoc,
       pendingClass,inlineEditClass,availableClasses,getClassObj,toggleInlineEdit,addClass,removeClass,
       newClassName,createClass,createAndApplyClass,deleteClass,toggleClass,editClass,goToClassDef,addProp,deleteProp,addDarkProp,deleteDarkProp,
-      addPropImmediate,addDarkPropImmediate,
+      addPropImmediate,addDarkPropImmediate,addInlineProp,deleteInlineProp,
+
       nodeHasContent,stdAttrs,iconFor,propSuggestions,
       isColorProp,colorToHex,disableSystemDark,
       mjmlSource,cleanMjmlSource,setDevice,setTheme,copyCode,
@@ -1121,7 +1167,8 @@ const app = createApp({
       prevSel,openLinkFromPreview,
       showRawHtml,rteEl,linkInput,linkPop,execFmt,isFmt,startLink,applyLink,removeLink,removeLinkFromPopup,onRteInput,onRteClick,insertRteBr,
       leftW,treeW,rightW,startResize,
-      showAdvanced, openCategories, toggleCategory, isCategoryOpen,
+      showAdvanced, showAdvancedInline, openCategories, toggleCategory, isCategoryOpen,
+
       addBlockPop, openAddBlock, closeAddBlock, addBlockFromPopup, addTemplateFromPopup, duplicateNode,
       popupAllowedTypes, popupHoveredDetail,
 

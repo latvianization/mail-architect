@@ -292,6 +292,43 @@
             </div>
           </div>
 
+          <!-- Inline CSS Section -->
+          <div class="inspector-section">
+            <div class="inspector-section-label">Inline CSS</div>
+            <div class="cls-card-modern open">
+              <div class="p-2 bg-white">
+                <!-- Visual Property Editor for Inline Styles -->
+                <visual-editor :cls="selectedNode" :is-dark="false" :defs="PROP_DEFS" :categories="PROP_CATEGORIES" :helpers="editorHelpers"></visual-editor>
+
+                <!-- Advanced Inline Styles Section -->
+                <div class="advanced-styles-toggle" @click="showAdvancedInline=!showAdvancedInline">
+                  <i class="fa-solid" :class="showAdvancedInline?'fa-chevron-up':'fa-chevron-down'"></i>
+                  Advanced Inline Properties
+                </div>
+
+                <div v-if="showAdvancedInline" class="mt-2 p-2 border-top bg-light rounded shadow-sm">
+                  <div v-for="(v,k) in selectedNode.style" :key="k" class="prop-row">
+                    <span class="prop-key">{{k}}</span>
+                    <label class="color-swatch-wrap" v-if="isColorProp(k)">
+                      <span class="color-swatch" :style="{background:v}"></span>
+                      <input type="color" :value="colorToHex(v)" @input="selectedNode.style[k]=$event.target.value; scheduleRender()">
+                    </label>
+                    <input class="prop-val" v-model="selectedNode.style[k]" @input="scheduleRender()">
+                    <button class="prop-del" @click="deleteInlineProp(selectedNode,k)"><i class="fa-solid fa-xmark"></i></button>
+                  </div>
+
+                  <div class="mt-2 pt-1 border-top">
+                    <select class="field-select py-1" @change="addInlineProp(selectedNode, $event.target.value); $event.target.value=''">
+                      <option value="">+ Add Inline Property…</option>
+                      <option v-for="p in propSuggestions" :key="'inline-'+p" :value="p">{{p}}</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+
           <!-- Attributes -->
           <div class="inspector-section" v-if="stdAttrs(selectedNode.type).length">
             <div class="inspector-section-label">Attributes</div>

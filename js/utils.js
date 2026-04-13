@@ -15,9 +15,11 @@ function makeNode(type, withScaffold = false) {
     id: uid(), type,
     classes,
     attrs: {},
+    style: {},
     content: defaultContent[type] || '',
     children: isContainer ? [] : undefined,
   };
+
 
   // Scaffolding
   if (withScaffold && scaffoldMap[type]) {
@@ -35,8 +37,10 @@ function deepCloneNode(node) {
     ...node,
     id: uid(), // New unique ID
     classes: [...(node.classes || [])],
-    attrs: { ...(node.attrs || {}) }
+    attrs: { ...(node.attrs || {}) },
+    style: { ...(node.style || {}) }
   };
+
   
   if (node.children) {
     clone.children = node.children.map(c => deepCloneNode(c));
@@ -104,13 +108,41 @@ function stripDivTypography(html) {
 function buildAttrs(node){
   let s='';
   if(node.classes&&node.classes.length) s+=` mj-class="${node.classes.join(' ')}"`;
-  // Always include a unique css-class for hover-highlight targeting in preview
+  
   const cssClasses=[`mja-${node.id}`];
   if(node.classes&&node.classes.length) cssClasses.push(...node.classes);
   s+=` css-class="${cssClasses.join(' ')}"`;
-  if(node.attrs){ for(const[k,v]of Object.entries(node.attrs)){if(v!==undefined&&v!==null&&v!=='')s+=` ${k}="${String(v).replace(/"/g,'&quot;')}"`;} }
+  
+  if(node.attrs){
+    for(const[k,v]of Object.entries(node.attrs)){
+      if(v!==undefined&&v!==null&&v!=='') s+=` ${k}="${String(v).replace(/"/g,'&quot;')}"`;
+    }
+  }
+
+  // Handle Inline Styles
+  if(node.style && Object.keys(node.style).length > 0) {
+    const inlineStyles = [];
+    const mjAttributes = ['mj-text','mj-button','mj-column','mj-section','mj-hero','mj-wrapper','mj-image','mj-divider','mj-spacer','mj-social','mj-social-element','mj-navbar','mj-navbar-link','mj-accordion','mj-accordion-element','mj-accordion-title','mj-accordion-text','mj-table'];
+    
+    // Properties that MJML supports as direct attributes on almost all tags
+    const stdMjmlAttrs = new Set(['align','background-color','border','border-bottom','border-left','border-right','border-top','border-radius','color','container-background-color','direction','font-family','font-size','font-style','font-weight','height','letter-spacing','line-height','padding','padding-bottom','padding-left','padding-right','padding-top','text-align','text-decoration','vertical-align','width']);
+
+    for(const [k,v] of Object.entries(node.style)) {
+      if(v === undefined || v === null || v === '') continue;
+      if(stdMjmlAttrs.has(k)) {
+        s += ` ${k}="${String(v).replace(/"/g,'&quot;')}"`;
+      } else {
+        inlineStyles.push(`${k}:${v}`);
+      }
+    }
+    if(inlineStyles.length > 0) {
+      s += ` style="${inlineStyles.join(';')}"`;
+    }
+  }
+
   return s;
 }
+
 
 function compileNode(node,depth){
   const pad='  '.repeat(depth);
@@ -159,7 +191,27 @@ function parseMjmlToTree(src){
         }
       }
     }
-    return { id: mkid(), type, classes: cls, attrs, content, children };
+    const style = {};
+    const styleAttr = el.getAttribute('style');
+    if (styleAttr) {
+      styleAttr.split(';').forEach(pair => {
+        const [k, v] = pair.split(':');
+        if (k && v) style[k.trim()] = v.trim();
+      });
+    }
+    
+    // Also check for MJML style-like attributes that we want to keep in the style object for editing
+    const stdMjmlAttrs = ['align','background-color','border','border-bottom','border-left','border-right','border-top','border-radius','color','container-background-color','direction','font-family','font-size','font-style','font-weight','height','letter-spacing','line-height','padding','padding-bottom','padding-left','padding-right','padding-top','text-align','text-decoration','vertical-align','width'];
+    stdMjmlAttrs.forEach(a => {
+      const val = el.getAttribute(a);
+      if (val) {
+        style[a] = val;
+        attrs[a] = undefined; // Remove from generic attrs to avoid double-storage
+      }
+    });
+
+    return { id: mkid(), type, classes: cls, attrs, style, content, children };
+
   }
 
   const newClasses = [];
