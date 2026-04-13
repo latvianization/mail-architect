@@ -241,7 +241,7 @@
                 <span class="cls-card-title">.{{cname}}</span>
                 <i class="fa-solid fa-sliders" style="opacity:0.4"></i>
               </div>
-              <div class="p-2 bg-white">
+              <div class="p-2 bg-white" v-if="getClassObj(cname)">
                 <!-- Visual Property Editor (Light) -->
                 <visual-editor :cls="getClassObj(cname)" :is-dark="false" :defs="PROP_DEFS" :categories="PROP_CATEGORIES" :helpers="editorHelpers"></visual-editor>
 
@@ -266,6 +266,7 @@
                     <input type="checkbox" v-model="getClassObj(cname).dark"> <span class="ms-1">Dark Mode Override</span>
                   </label>
                   <div class="dark-section" v-if="getClassObj(cname).dark">
+
                     <!-- Visual Property Editor (Dark) -->
                     <visual-editor :cls="getClassObj(cname)" :is-dark="true" :defs="PROP_DEFS" :categories="PROP_CATEGORIES" :helpers="editorHelpers"></visual-editor>
 

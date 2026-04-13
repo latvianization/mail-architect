@@ -37,14 +37,3 @@ This file serves as a persistent context for AI agents working on this repositor
 2. **Styling Flow**: Users define `mj-class` tokens in the "Classes" tab. These are applied to nodes and compiled into the MJML `<mj-head>` block.
 3. **Preview Interaction**: The preview is an iframe. Direct DOM access is used from the main window to the iframe for hover highlights and click-to-select functionality.
 4. **MJML Compilation**: Done in `mjmlSource` computed property. Internal targeting classes (`mja-{id}`) are added for builder functionality and stripped in `cleanMjmlSource`.
-
-## Recent Changes (2026-04-12)
-- **Refactoring**: Split the monolithic `email-builder.html` into a modular structure (`index.html`, `css/`, `js/`).
-- **UI/UX Modernization**: Implemented a premium, high-density design system.
-- **Workflow Optimization**: Unified class management with inline creation, added component dropdowns in the structural tree, and synchronized Dark Mode overrides.
-
-## Focus Areas for Future Work
-- **Component Nesting**: Improving structural reliability of nested components.
-- **RTE Features**: Enhanced link management and custom style injection.
-- **Templates**: Adding a library of pre-built MJML layouts for faster onboarding.
-- **Templates**: Adding a library of pre-built MJML layouts for faster onboarding.
