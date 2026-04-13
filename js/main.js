@@ -29,7 +29,17 @@ const app = createApp({
 
     // IO menu
     const ioMenuOpen = ref(false);
+
+    // Add Block Popup
+    const addBlockPop = reactive({
+      show: false,
+      parentId: null,
+      parentType: '',
+      hoveredType: null
+    });
+
     const linkInput = ref(null);
+
     const vClickOutside = {
       mounted(el, binding) {
         el._clickOutside = (ev) => { if (!(el === ev.target || el.contains(ev.target))) binding.value(ev); };
@@ -149,6 +159,46 @@ const app = createApp({
 
     function selectNode(id){ selectedId.value=id; tab.value='node'; }
     function deleteNode(n){ if(selectedId.value===n.id)selectedId.value=null; removeNode(tree.value,n); }
+
+    // Add Block methods
+    function openAddBlock(parentId, parentType) {
+      addBlockPop.parentId = parentId;
+      addBlockPop.parentType = parentType;
+      addBlockPop.show = true;
+      // Default hover to first allowed item
+      const allowed = popupAllowedTypes.value;
+      if (allowed.length) addBlockPop.hoveredType = allowed[0].type;
+    }
+    function closeAddBlock() {
+      addBlockPop.show = false;
+      addBlockPop.parentId = null;
+      addBlockPop.hoveredType = null;
+    }
+    function addBlockFromPopup(type) {
+      if (!addBlockPop.parentId) return;
+      const parent = findNode(tree.value, addBlockPop.parentId);
+      if (parent) {
+        if (!parent.children) parent.children = [];
+        const newNode = makeNode(type);
+        parent.children.push(newNode);
+        selectNode(newNode.id);
+        toast(`Added ${type.replace('mj-','')} component`);
+      }
+      closeAddBlock();
+    }
+
+    const popupAllowedTypes = computed(() => {
+      if (!addBlockPop.parentType) return [];
+      const allowed = allowedChildrenMap[addBlockPop.parentType] || [];
+      return allowed.map(t => compLib.find(c => c.type === t)).filter(Boolean);
+    });
+
+    const popupHoveredDetail = computed(() => {
+      if (!addBlockPop.hoveredType) return null;
+      return compLib.find(c => c.type === addBlockPop.hoveredType);
+    });
+
+
     function clearDoc(){
       if(!confirm('Clear entire document?'))return;
       tree.value=[{id:'root',type:'mj-body',classes:['body-bg'],attrs:{},content:'',children:[]}];
@@ -972,7 +1022,10 @@ const app = createApp({
       showRawHtml,rteEl,linkInput,linkPop,execFmt,isFmt,startLink,applyLink,removeLink,removeLinkFromPopup,onRteInput,onRteClick,insertRteBr,
       leftW,treeW,rightW,startResize,
       showAdvanced, openCategories, toggleCategory, isCategoryOpen,
+      addBlockPop, openAddBlock, closeAddBlock, addBlockFromPopup,
+      popupAllowedTypes, popupHoveredDetail,
       editorHelpers: {
+
         getPropNumeric, setPropNumeric, getPropValue, setPropValue,
         toggleSides, isSidesEnabled, getSidesValue, getSidesNumeric, setSidesNumeric,
         isCategoryOpen, toggleCategory, colorToHex, scheduleRender

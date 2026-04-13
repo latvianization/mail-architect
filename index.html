@@ -80,23 +80,7 @@
   <!-- ── MAIN ────────────────────────────────────────────────── -->
   <div class="app-body">
 
-    <!-- Components palette (Left) -->
-    <aside class="sidebar-left" v-show="viewMode==='builder'" :style="{width: leftW+'px'}">
-      <div class="sidebar-title">Library</div>
-      <draggable
-        class="comp-grid" :list="componentLibrary" :group="{name:'mjml',pull:'clone',put:false}" :clone="cloneNode" item-key="type" :sort="false"
-        ghost-class="sortable-ghost" drag-class="sortable-drag"
-      >
-        <template #item="{element}">
-          <div class="comp-item" :data-type="element.type" :title="element.desc">
-            <div class="comp-item-icon"><i :class="element.icon"></i></div>
-            <span class="comp-item-name">{{element.name}}</span>
-          </div>
-        </template>
-      </draggable>
-    </aside>
 
-    <div class="resize-handle" v-show="viewMode==='builder'" @pointerdown="startResize($event,'left')" title="Resize Sidebar"></div>
 
     <!-- Canvas (Center) -->
     <main class="canvas-area">
@@ -111,9 +95,10 @@
           <div class="tree-scroll">
             <draggable :list="tree" :group="{ name: 'mjml', put: false }" item-key="id" class="drop-zone" style="min-height:100%">
               <template #item="{element}">
-                <tree-node :node="element" :selected-id="selectedId" @select="selectNode" @delete="deleteNode" @hover="setHoverNode"></tree-node>
+                <tree-node :node="element" :selected-id="selectedId" @select="selectNode" @delete="deleteNode" @hover="setHoverNode" @add="openAddBlock($event.id, $event.type)"></tree-node>
               </template>
             </draggable>
+
           </div>
         </div>
 
@@ -458,7 +443,49 @@
   </div>
 
   <div class="toast-msg" :class="{show:toastShow, ok:toastSuccess}">{{toastMsg}}</div>
+
+  <!-- ── Add Block Popup ──────────────────────────────────────── -->
+  <div class="modal-overlay" v-if="addBlockPop.show" @click.self="closeAddBlock">
+    <div class="add-block-box">
+      <!-- Left Side: List -->
+      <div class="add-block-list-side">
+        <div class="add-block-list-hdr">
+          <div class="add-block-list-title">Available Blocks</div>
+          <div class="add-block-list-sub">Add to {{addBlockPop.parentType.replace('mj-','')}}</div>
+        </div>
+        <div class="add-block-list-scroll">
+          <div class="add-block-cat-label">Blocks</div>
+          <div v-for="comp in popupAllowedTypes" :key="comp.type" 
+               class="add-block-item" :class="{active: addBlockPop.hoveredType === comp.type}"
+               @mouseenter="addBlockPop.hoveredType = comp.type"
+               @click="addBlockFromPopup(comp.type)">
+            <div class="add-block-item-icon"><i :class="comp.icon"></i></div>
+            <div class="add-block-item-name">{{comp.name}}</div>
+          </div>
+          <div v-if="!popupAllowedTypes.length" class="p-4 text-center text-muted" style="font-size:12px">
+            No components can be added here.
+          </div>
+        </div>
+      </div>
+      
+      <!-- Right Side: Details -->
+      <div class="add-block-detail-side">
+        <template v-if="popupHoveredDetail">
+          <div class="detail-icon-big"><i :class="popupHoveredDetail.icon"></i></div>
+          <h2 class="detail-title">{{popupHoveredDetail.name}}</h2>
+          <p class="detail-desc">{{popupHoveredDetail.desc}}</p>
+          <button class="detail-btn-add" @click="addBlockFromPopup(popupHoveredDetail.type)">
+            <i class="fa-solid fa-plus me-2"></i> Add {{popupHoveredDetail.name}}
+          </button>
+        </template>
+        <template v-else>
+          <div class="text-muted">Hover over a component to see details</div>
+        </template>
+      </div>
+    </div>
+  </div>
 </div>
+
 
 <script src="js/constants.js"></script>
 <script src="js/utils.js"></script>
