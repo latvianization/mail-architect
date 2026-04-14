@@ -181,6 +181,10 @@ function parseMjmlToTree(src){
   
   function parseEl(el) {
     const type = el.tagName.toLowerCase(); 
+    const cssClassLine = el.getAttribute('css-class') || el.getAttribute('class') || '';
+    const m = cssClassLine.match(/\bmja-([a-z0-9]+)\b/);
+    const id = m ? m[1] : uid();
+
     const cls = (el.getAttribute('mj-class') || '').split(' ').filter(Boolean);
     const attrs = {};
     for (const a of el.attributes) {
@@ -218,8 +222,7 @@ function parseMjmlToTree(src){
       }
     });
 
-    return { id: mkid(), type, classes: cls, attrs, style, content, children };
-
+    return { id, type, classes: cls, attrs, style, content, children };
   }
 
   const newClasses = [];

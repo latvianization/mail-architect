@@ -515,28 +515,31 @@ const app = createApp({
 
 
     const mjmlSource = computed(()=>{
-      // mj-attributes block
+      // 1. Scan tree for all used classes
+      const usedClasses = new Set();
+      function scanTree(nodes) {
+        for (const n of nodes) {
+          if (n.classes) n.classes.forEach(c => usedClasses.add(c));
+          if (n.content) {
+            const matches = n.content.matchAll(/\bclass="([^"]+)"/g);
+            for (const m of matches) m[1].split(' ').filter(Boolean).forEach(c => usedClasses.add(c));
+          }
+          if (n.children) scanTree(n.children);
+        }
+      }
+      scanTree(tree.value);
+
+      // 2. Generate mj-attributes (only for used classes)
       let attrs='      <mj-all font-family="Inter, system-ui, -apple-system, sans-serif" />\n      <mj-text font-size="inherit" color="inherit" line-height="inherit" />\n';
       for(const cls of classes.value){
+        if (!usedClasses.has(cls.name)) continue;
         const keys=Object.keys(cls.props);
         if(keys.length){ const ps=keys.map(k=>`${k}="${cls.props[k]}"`).join(' '); attrs+=`      <mj-class name="${cls.name}" ${ps} />\n`; }
       }
 
-      // Standard CSS for all used classes
+      // 3. Generate Link CSS for used classes
       let linkCss = '';
-      const usedLinkCls = new Set();
-      function scanForLinkCls(list){
-        for(const n of list){
-          if(n.classes) n.classes.forEach(c => usedLinkCls.add(c));
-          if(n.content){
-            const m = n.content.matchAll(/class="([^"]+)"/g);
-            for(const match of m) usedLinkCls.add(match[1]);
-          }
-          if(n.children) scanForLinkCls(n.children);
-        }
-      }
-      scanForLinkCls(tree.value);
-      for(const lc of usedLinkCls){
+      for(const lc of usedClasses){
         const cls = classes.value.find(c=>c.name===lc);
         if(cls){
           linkCss += `      .${lc} {\n`;
@@ -545,8 +548,10 @@ const app = createApp({
         }
       }
 
+      // 4. Generate Dark Mode CSS for used classes
       let darkCss='';
       for(const c of classes.value){
+        if(!usedClasses.has(c.name)) continue;
         if(c.dark && c.darkProps && Object.keys(c.darkProps).length>0){
           const p = Object.entries(c.darkProps).map(([k,v]) => `${k}: ${v} !important;`).join(' ');
           darkCss += `      .mja-forced-dark .${c.name}, .mja-forced-dark.${c.name} { ${p} }\n`;
@@ -554,10 +559,10 @@ const app = createApp({
         }
       }
 
-      // Inline overrides for each node (Inline CSS)
+      // 5. Generate Inline Overrides (mja-id)
       let inlineStyleRules = '';
-      function scanForInlineStyles(list){
-        for(const n of list){
+      function scanInline(nodes){
+        for(const n of nodes){
           if(n.style && Object.keys(n.style).length > 0){
             inlineStyleRules += `      .mja-${n.id} {\n`;
             for(const [k,v] of Object.entries(n.style)) {
@@ -565,45 +570,35 @@ const app = createApp({
             }
             inlineStyleRules += `      }\n`;
           }
-          if(n.children) scanForInlineStyles(n.children);
+          if(n.children) scanInline(n.children);
         }
       }
-      scanForInlineStyles(tree.value);
+      scanInline(tree.value);
 
       const styleComb = (linkCss + darkCss + inlineStyleRules).trim();
       const stylePart = styleComb ? `    <mj-style>\n      ${styleComb}\n    </mj-style>\n`:'';
 
       let body='';
-      for(const n of tree.value){
-        body+=compileNode(n,1)+'\n';
-      }
+      for(const n of tree.value) body+=compileNode(n,1)+'\n';
 
       return `<mjml>\n  <mj-head>\n    <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />\n    <mj-attributes>\n${attrs}    </mj-attributes>\n${stylePart}  </mj-head>\n${body}</mjml>`;
     });
 
-    // Strip builder-internal mja-{id} classes for clean user output
-    const cleanMjmlSource = computed(() => {
-      let src = mjmlSource.value;
-      
-      // 1. Remove internal targeting classes from attributes (css-class="...")
-      src = src.replace(/css-class="([^"]*)"/g, (match, val) => {
-        const cleaned = val.replace(/\bmja-[a-z0-9]+\b/g, '').replace(/\s+/g,' ').trim();
-        return cleaned ? `css-class="${cleaned}"` : '';
-      });
+    function cleanFinalHtml(html) {
+      if(!html) return '';
+      // Remove mja-{id} classes and other builder noise
+      let res = html.replace(/\bmja-[a-z0-9]+\b/g, '').replace(/\bmja-selected\b/g, '').replace(/\bmja-hl\b/g, '');
+      // Remove builder-specific styles from the style block in HTML
+      res = res.replace(/\.mja-forced-dark\s+\.[a-z0-9_-]+,\s+\.mja-forced-dark\.[a-z0-9_-]+\s*\{[^}]+\}/gi, '');
+      res = res.replace(/\.mja-[a-z0-9]+\s*\{[^}]+\}/gi, '');
+      // Clean up empty class attributes or multiple spaces
+      res = res.replace(/\bclass="\s*"/g, '');
+      res = res.replace(/\s{2,}/g, ' ');
+      return res.trim();
+    }
 
-      // 2. Remove internal targeting classes from standard HTML attributes in content (class="...")
-      src = src.replace(/\bclass="([^"]*)"/g, (match, val) => {
-        const cleaned = val.replace(/\bmja-[a-z0-9]+\b/g, '').replace(/\s+/g,' ').trim();
-        return `class="${cleaned}"`;
-      });
-
-      // 3. Remove .mja-forced-dark selectors from the generated <mj-style>
-      // These looks like: .mja-forced-dark .classname, .mja-forced-dark.classname { ... }
-      src = src.replace(/\.mja-forced-dark\s+\.[a-z0-9_-]+,\s+\.mja-forced-dark\.[a-z0-9_-]+\s*\{[^}]+\}/gi, '');
-
-      // 4. Clean up any leftover double-spaces or empty attributes
-      return src.replace(/  +/g, ' ').replace(/class=""/g, '').trim();
-    });
+    // Keep mja-ids in MJML for round-trip support
+    const cleanMjmlSource = computed(() => mjmlSource.value);
 
     // MJML resolver
     function getMjml2Html(){
@@ -960,7 +955,7 @@ const app = createApp({
       try {
         const fn = getMjml2Html();
         const r = fn(cleanMjmlSource.value, {keepComments:false, validationLevel:'soft'});
-        let html = r.html;
+        let html = cleanFinalHtml(r.html);
         html = stripDivTypography(html);
         if(window.html_beautify) html = window.html_beautify(html, {indent_size:2, wrap_line_length:120});
         
@@ -1063,13 +1058,13 @@ const app = createApp({
       try{
         const fn=getMjml2Html();
         const r=fn(cleanMjmlSource.value,{keepComments:false,validationLevel:'soft'});
-        let html=r.html;
+        let html=cleanFinalHtml(r.html);
         html=stripDivTypography(html);
         if(window.html_beautify)html=window.html_beautify(html,{indent_size:2,wrap_line_length:120});
         exportHtml.value=html;
 
         const rd=fn(cleanMjmlSource.value.replace(/<mj-body([^>]*)>/i, (match, attrs) => attrs.includes('css-class="') ? `<mj-body${attrs.replace('css-class="', 'css-class="mja-forced-dark ')}>` : `<mj-body css-class="mja-forced-dark"${attrs}>`),{keepComments:false,validationLevel:'soft'});
-        let htmlDark=rd.html;
+        let htmlDark=cleanFinalHtml(rd.html);
         htmlDark=stripDivTypography(htmlDark);
         if(window.html_beautify)htmlDark=window.html_beautify(htmlDark,{indent_size:2,wrap_line_length:120});
         exportHtmlDark.value=htmlDark;
