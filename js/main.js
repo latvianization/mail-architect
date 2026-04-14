@@ -52,7 +52,16 @@ const app = createApp({
 
     function getPreviewMjml(node) {
       if (!node) return '';
-      const body = compileNode(node, 0);
+      let body = compileNode(node, 0);
+      
+      // If the node is a content-level component, wrap it in section and column so MJML renders it correctly
+      const isContent = ['mj-text','mj-image', 'mj-button', 'mj-divider', 'mj-spacer', 'mj-social', 'mj-navbar', 'mj-accordion', 'mj-table'].includes(node.type);
+      if (isContent) {
+        body = `<mj-section><mj-column>${body}</mj-column></mj-section>`;
+      } else if (node.type === 'mj-column') {
+        body = `<mj-section>${body}</mj-section>`;
+      }
+      
       return `<mjml><mj-body>${body}</mj-body></mjml>`;
     }
 
