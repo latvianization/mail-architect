@@ -167,6 +167,7 @@ const VisualEditorComp = {
           </div>
         </div>
       </div>
+      <slot name="footer"></slot>
     </div>
   `
 };

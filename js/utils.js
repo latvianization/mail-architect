@@ -97,7 +97,7 @@ function disableSystemDark(html){
 function stripDivTypography(html) {
   if(!html) return html;
   return html.replace(/<div([^>]*)style="([^"]*)"([^>]*)>/gi, (match, prefix, style, postfix) => {
-    let s = style.replace(/(?:^|;)\s*(?:font-family|font-size|line-height|text-align|color)\s*:[^;]+/gi, '');
+    let s = style.replace(/(?:^|;)\s*(?:font-family|font-size|font-weight|line-height|text-align|color)\s*:[^;]+/gi, '');
     s = s.replace(/^;+/, '').replace(/;+/g, ';').trim();
     if(!s || s === ';') return `<div${prefix}${postfix}>`;
     return `<div${prefix}style="${s}"${postfix}>`;
@@ -125,10 +125,18 @@ function buildAttrs(node){
     const mjAttributes = ['mj-text','mj-button','mj-column','mj-section','mj-hero','mj-wrapper','mj-image','mj-divider','mj-spacer','mj-social','mj-social-element','mj-navbar','mj-navbar-link','mj-accordion','mj-accordion-element','mj-accordion-title','mj-accordion-text','mj-table'];
     
     // Properties that MJML supports as direct attributes on almost all tags
-    const stdMjmlAttrs = new Set(['align','background-color','border','border-bottom','border-left','border-right','border-top','border-radius','color','container-background-color','direction','font-family','font-size','font-style','font-weight','height','letter-spacing','line-height','padding','padding-bottom','padding-left','padding-right','padding-top','text-align','text-decoration','vertical-align','width']);
+    const stdMjmlAttrs = new Set(['align','background-color','border','border-bottom','border-left','border-right','border-top','border-radius','color','container-background-color','direction','font-family','font-size','font-style','font-weight','height','letter-spacing','line-height','padding','padding-bottom','padding-left','padding-right','padding-top','text-align','text-decoration','vertical-align','width','src','href','target','alt','mode']);
+    
+    // Synthesize 'border' if individual components are present but 'border' itself is not
+    if (!node.style['border'] && (node.style['border-width'] || node.style['border-style'] || node.style['border-color'])) {
+      const bw = node.style['border-width'] || '1px';
+      const bs = node.style['border-style'] || 'solid';
+      const bc = node.style['border-color'] || '#000000';
+      s += ` border="${bw} ${bs} ${bc}"`;
+    }
 
     for(const [k,v] of Object.entries(node.style)) {
-      if(v === undefined || v === null || v === '') continue;
+      if(v === undefined || v === null || v === '' || k === 'border-width' || k === 'border-style' || k === 'border-color') continue;
       if(stdMjmlAttrs.has(k)) {
         s += ` ${k}="${String(v).replace(/"/g,'&quot;')}"`;
       } else {

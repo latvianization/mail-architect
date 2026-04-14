@@ -500,7 +500,7 @@ const app = createApp({
         obj.darkProps[`${key}-${side}`] = val + unit;
       } else {
         const target = obj.props || obj.style || obj;
-        target[key] = val + unit;
+        target[`${key}-${side}`] = val + unit;
       }
       scheduleRender();
     }
@@ -561,7 +561,23 @@ const app = createApp({
         }
       }
 
-      const styleComb = (linkCss + darkCss).trim();
+      // Inline overrides for each node (Inline CSS)
+      let inlineStyleRules = '';
+      function scanForInlineStyles(list){
+        for(const n of list){
+          if(n.style && Object.keys(n.style).length > 0){
+            inlineStyleRules += `      .mja-${n.id} {\n`;
+            for(const [k,v] of Object.entries(n.style)) {
+               if(v !== undefined && v !== null && v !== '') inlineStyleRules += `        ${k}: ${v} !important;\n`;
+            }
+            inlineStyleRules += `      }\n`;
+          }
+          if(n.children) scanForInlineStyles(n.children);
+        }
+      }
+      scanForInlineStyles(tree.value);
+
+      const styleComb = (linkCss + darkCss + inlineStyleRules).trim();
       const stylePart = styleComb ? `    <mj-style>\n      ${styleComb}\n    </mj-style>\n`:'';
 
       let body='';

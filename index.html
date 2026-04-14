@@ -243,46 +243,30 @@
               </div>
               <div class="p-2 bg-white" v-if="getClassObj(cname)">
                 <!-- Visual Property Editor (Light) -->
-                <visual-editor :cls="getClassObj(cname)" :is-dark="false" :defs="PROP_DEFS" :categories="PROP_CATEGORIES" :helpers="editorHelpers"></visual-editor>
-
-                <!-- Advanced Styles Section -->
-                <div class="advanced-styles-toggle" @click="showAdvanced=!showAdvanced">
-                  <i class="fa-solid" :class="showAdvanced?'fa-chevron-up':'fa-chevron-down'"></i>
-                  Advanced Properties (Raw)
-                </div>
-
-                <div v-if="showAdvanced" class="mt-2 p-2 border-top bg-light rounded shadow-sm">
-                  <div v-for="(v,k) in getClassObj(cname).props" :key="k" class="prop-row">
-                    <span class="prop-key">{{k}}</span>
-                    <label class="color-swatch-wrap" v-if="isColorProp(k)">
-                      <span class="color-swatch" :style="{background:v}"></span>
-                      <input type="color" :value="colorToHex(v)" @input="getClassObj(cname).props[k]=$event.target.value; scheduleRender()">
+                <visual-editor :cls="getClassObj(cname)" :is-dark="false" :defs="PROP_DEFS" :categories="PROP_CATEGORIES" :helpers="editorHelpers">
+                  <template #footer>
+                    <label class="dark-toggle mt-2">
+                      <input type="checkbox" v-model="getClassObj(cname).dark"> <span class="ms-1">Dark Mode Override</span>
                     </label>
-                    <input class="prop-val" v-model="getClassObj(cname).props[k]" @input="scheduleRender()">
-                    <button class="prop-del" @click="deleteProp(getClassObj(cname),k)"><i class="fa-solid fa-xmark"></i></button>
-                  </div>
+                    <div class="dark-section" v-if="getClassObj(cname).dark">
+                      <!-- Visual Property Editor (Dark) -->
+                      <visual-editor :cls="getClassObj(cname)" :is-dark="true" :defs="PROP_DEFS" :categories="PROP_CATEGORIES" :helpers="editorHelpers"></visual-editor>
 
-                  <label class="dark-toggle mt-2">
-                    <input type="checkbox" v-model="getClassObj(cname).dark"> <span class="ms-1">Dark Mode Override</span>
-                  </label>
-                  <div class="dark-section" v-if="getClassObj(cname).dark">
-
-                    <!-- Visual Property Editor (Dark) -->
-                    <visual-editor :cls="getClassObj(cname)" :is-dark="true" :defs="PROP_DEFS" :categories="PROP_CATEGORIES" :helpers="editorHelpers"></visual-editor>
-
-                    <div class="inspector-section-label sm mt-3">Custom Dark Overrides</div>
-                    <div class="prop-row" v-for="(v,k) in (getClassObj(cname).darkProps || {})" :key="'dark-'+k" v-if="!PROP_DEFS[k]">
-                      <span class="prop-key">{{k}}</span>
-                      <input class="prop-val" v-model="getClassObj(cname).darkProps[k]" @input="scheduleRender()">
-                      <button class="prop-del" @click="deleteDarkProp(getClassObj(cname),k)"><i class="fa-solid fa-xmark"></i></button>
+                      <div class="inspector-section-label sm mt-3">Custom Dark Overrides</div>
+                      <div class="prop-row" v-for="(v,k) in (getClassObj(cname).darkProps || {})" :key="'dark-'+k" v-if="!PROP_DEFS[k]">
+                        <span class="prop-key">{{k}}</span>
+                        <input class="prop-val" v-model="getClassObj(cname).darkProps[k]" @input="scheduleRender()">
+                        <button class="prop-del" @click="deleteDarkProp(getClassObj(cname),k)"><i class="fa-solid fa-xmark"></i></button>
+                      </div>
+                      <select class="field-select py-1 mt-1" @change="addDarkPropImmediate(getClassObj(cname), $event.target.value); $event.target.value=''">
+                        <option value="">+ Add Custom Dark Override…</option>
+                        <option v-for="p in propSuggestions" :key="'dp-'+p" :value="p" v-if="!PROP_DEFS[p]">{{p}}</option>
+                      </select>
                     </div>
-                    <select class="field-select py-1 mt-1" @change="addDarkPropImmediate(getClassObj(cname), $event.target.value); $event.target.value=''">
-                      <option value="">+ Add Custom Dark Override…</option>
-                      <option v-for="p in propSuggestions" :key="'dp-'+p" :value="p" v-if="!PROP_DEFS[p]">{{p}}</option>
-                    </select>
-                  </div>
+                  </template>
+                </visual-editor>
 
-                  <div class="mt-2 pt-1 border-top">
+                <div class="mt-2 pt-1 border-top">
                     <select class="field-select py-1" @change="addPropImmediate(getClassObj(cname), $event.target.value); $event.target.value=''">
                       <option value="">+ Add Property Style…</option>
                       <option v-for="p in propSuggestions" :key="p" :value="p">{{p}}</option>
@@ -304,7 +288,7 @@
                 <!-- Advanced Inline Styles Section -->
                 <div class="advanced-styles-toggle" @click="showAdvancedInline=!showAdvancedInline">
                   <i class="fa-solid" :class="showAdvancedInline?'fa-chevron-up':'fa-chevron-down'"></i>
-                  Advanced Inline Properties
+                  Advanced Properties (Raw)
                 </div>
 
                 <div v-if="showAdvancedInline" class="mt-2 p-2 border-top bg-light rounded shadow-sm">
@@ -355,34 +339,32 @@
             </div>
             <div class="p-2 bg-white" v-show="cls._open">
               <!-- Visual Property Editor (Light) -->
-              <visual-editor :cls="cls" :is-dark="false" :defs="PROP_DEFS" :categories="PROP_CATEGORIES" :helpers="editorHelpers"></visual-editor>
+              <visual-editor :cls="cls" :is-dark="false" :defs="PROP_DEFS" :categories="PROP_CATEGORIES" :helpers="editorHelpers">
+                <template #footer>
+                  <!-- Unified Dark Mode in Global View -->
+                  <label class="dark-toggle mt-2">
+                    <input type="checkbox" v-model="cls.dark"> <span class="ms-1">Dark Mode Override</span>
+                  </label>
+                  <div class="dark-section" v-if="cls.dark">
+                    <!-- Visual Property Editor (Dark) -->
+                    <visual-editor :cls="cls" :is-dark="true" :defs="PROP_DEFS" :categories="PROP_CATEGORIES" :helpers="editorHelpers"></visual-editor>
+
+                    <div class="inspector-section-label sm mt-3">Custom Dark Overrides</div>
+                    <div class="prop-row" v-for="(v,k) in (cls.darkProps || {})" :key="'gdark-'+k" v-if="!PROP_DEFS[k]">
+                      <span class="prop-key">{{k}}</span>
+                      <input class="prop-val" v-model="cls.darkProps[k]" @input="scheduleRender()">
+                      <button class="prop-del" @click="deleteDarkProp(cls,k)"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <select class="field-select py-1 mt-1" @change="addDarkPropImmediate(cls, $event.target.value); $event.target.value=''">
+                      <option value="">+ Add Custom Dark Override…</option>
+                      <option v-for="p in propSuggestions" :key="'gdp-'+p" :value="p" v-if="!PROP_DEFS[p]">{{p}}</option>
+                    </select>
+                  </div>
+                </template>
+              </visual-editor>
 
               <div class="inspector-section-label sm mt-3">Custom Styles</div>
               <div v-for="(v,k) in cls.props" :key="k" class="prop-row" v-if="!PROP_DEFS[k]">
-                <span class="prop-key">{{k}}</span>
-                <input class="prop-val" v-model="cls.props[k]" @input="scheduleRender()">
-                <button class="prop-del" @click="deleteProp(cls,k)"><i class="fa-solid fa-xmark"></i></button>
-              </div>
-
-              <!-- Unified Dark Mode in Global View -->
-              <label class="dark-toggle mt-2">
-                <input type="checkbox" v-model="cls.dark"> <span class="ms-1">Dark Mode Override</span>
-              </label>
-              <div class="dark-section" v-if="cls.dark">
-                <!-- Visual Property Editor (Dark) -->
-                <visual-editor :cls="cls" :is-dark="true" :defs="PROP_DEFS" :categories="PROP_CATEGORIES" :helpers="editorHelpers"></visual-editor>
-
-                <div class="inspector-section-label sm mt-3">Custom Dark Overrides</div>
-                <div class="prop-row" v-for="(v,k) in (cls.darkProps || {})" :key="'gdark-'+k" v-if="!PROP_DEFS[k]">
-                  <span class="prop-key">{{k}}</span>
-                  <input class="prop-val" v-model="cls.darkProps[k]" @input="scheduleRender()">
-                  <button class="prop-del" @click="deleteDarkProp(cls,k)"><i class="fa-solid fa-xmark"></i></button>
-                </div>
-                <select class="field-select py-1 mt-1" @change="addDarkPropImmediate(cls, $event.target.value); $event.target.value=''">
-                  <option value="">+ Add Custom Dark Override…</option>
-                  <option v-for="p in propSuggestions" :key="'gdp-'+p" :value="p" v-if="!PROP_DEFS[p]">{{p}}</option>
-                </select>
-              </div>
               
               <div class="d-flex gap-1 mt-2 pt-1 border-top">
                  <select class="field-select py-1" style="flex:1" @change="addPropImmediate(cls, $event.target.value); $event.target.value=''">
