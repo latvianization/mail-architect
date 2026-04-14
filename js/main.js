@@ -47,13 +47,6 @@ const app = createApp({
 
     const linkInput = ref(null);
 
-    const vClickOutside = {
-      mounted(el, binding) {
-        el._clickOutside = (ev) => { if (!(el === ev.target || el.contains(ev.target))) binding.value(ev); };
-        document.addEventListener('click', el._clickOutside);
-      },
-      unmounted(el) { document.removeEventListener('click', el._clickOutside); }
-    };
     function closeIoMenu(e){ if(!e.target.closest('#io-wrap')) ioMenuOpen.value=false; }
     onMounted(()=>document.addEventListener('click',closeIoMenu));
 
@@ -1270,7 +1263,10 @@ const app = createApp({
       if (el === ev.target || el.contains(ev.target)) return;
       binding.value(ev);
     };
-    document.addEventListener('click', el._clickOutside);
+    // Delay listener registration to avoid catching the same event that opened the element
+    setTimeout(() => {
+      document.addEventListener('click', el._clickOutside);
+    }, 0);
   },
   unmounted(el) {
     document.removeEventListener('click', el._clickOutside);
