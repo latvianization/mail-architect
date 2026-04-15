@@ -174,11 +174,36 @@ function parseMjmlToTree(src){
   // that are common in MJML but invalid in strict XML.
   const doc = parser.parseFromString(src, 'text/html');
   
-  let _idCtr = 1; 
-  const mkid = () => 'imp-' + (_idCtr++);
+  const mjStyleLookup = {}; // Map of .mja-{id} -> props
+  const darkStyleLookup = {}; // Map of .classname -> props
   
-  const TEXT_TYPES = ['mj-text','mj-button','mj-raw','mj-table','mj-social-element','mj-navbar-link'];
-  
+  const styleEl = doc.querySelector('mj-style');
+  if (styleEl) {
+    const css = styleEl.textContent;
+    // Extract local overrides: .mja-id { k: v !important; ... }
+    const localMatches = css.matchAll(/\.mja-([a-z0-9]+)\s*\{([^}]+)\}/gi);
+    for (const m of localMatches) {
+      const id = m[1];
+      const props = {};
+      m[2].split(';').forEach(p => {
+        const [k, v] = p.split(':');
+        if (k && v) props[k.trim()] = v.replace('!important', '').trim();
+      });
+      mjStyleLookup[id] = props;
+    }
+    // Extract dark mode overrides: .mja-forced-dark .classname { ... }
+    const darkMatches = css.matchAll(/\.mja-forced-dark\s+\.([a-z0-9_-]+)[^{]*\{([^}]+)\}/gi);
+    for (const m of darkMatches) {
+      const cname = m[1];
+      const props = {};
+      m[2].split(';').forEach(p => {
+        const [k, v] = p.split(':');
+        if (k && v) props[k.trim()] = v.replace('!important', '').trim();
+      });
+      darkStyleLookup[cname] = props;
+    }
+  }
+
   function parseEl(el) {
     const type = el.tagName.toLowerCase(); 
     const cssClassLine = el.getAttribute('css-class') || el.getAttribute('class') || '';
@@ -203,7 +228,11 @@ function parseMjmlToTree(src){
         }
       }
     }
+    
+    // Combine styles from 'style' attribute, standard MJML attributes, and mj-style lookup
     const style = {};
+    
+    // 1. From style attribute
     const styleAttr = el.getAttribute('style');
     if (styleAttr) {
       styleAttr.split(';').forEach(pair => {
@@ -212,21 +241,25 @@ function parseMjmlToTree(src){
       });
     }
     
-    // Also check for MJML style-like attributes that we want to keep in the style object for editing
-    const stdMjmlAttrs = ['align','background-color','border','border-bottom','border-left','border-right','border-top','border-radius','color','container-background-color','direction','font-family','font-size','font-style','font-weight','height','letter-spacing','line-height','padding','padding-bottom','padding-left','padding-right','padding-top','text-align','text-decoration','vertical-align','width'];
+    // 2. From standard MJML attributes
+    const stdMjmlAttrs = ['align','background-color','border','border-bottom','border-left','border-right','border-top','border-radius','color','container-background-color','direction','font-family','font-size','font-style','font-weight','height','letter-spacing','line-height','padding','padding-bottom','padding-left','padding-right','padding-top','text-align','text-decoration','vertical-align','width','src','href','target','alt','mode'];
     stdMjmlAttrs.forEach(a => {
       const val = el.getAttribute(a);
       if (val) {
         style[a] = val;
-        attrs[a] = undefined; // Remove from generic attrs to avoid double-storage
+        attrs[a] = undefined; 
       }
     });
+
+    // 3. From mj-style lookup (local overrides mja-id)
+    if (mjStyleLookup[id]) {
+      Object.assign(style, mjStyleLookup[id]);
+    }
 
     return { id, type, classes: cls, attrs, style, content, children };
   }
 
   const newClasses = [];
-  // Find mj-attributes anywhere (HTML parser might move them)
   const attrsEl = doc.querySelector('mj-attributes');
   if (attrsEl) {
     for (const c of attrsEl.querySelectorAll('mj-class')) {
@@ -236,7 +269,13 @@ function parseMjmlToTree(src){
       for (const a of c.attributes) {
         if (a.name !== 'name') props[a.name] = a.value;
       }
-      newClasses.push({ name, props, _open: false, _pk: '', _pv: '' }); 
+      
+      const clsObj = { name, props, _open: false, _pk: '', _pv: '', dark: false, darkProps: {} };
+      if (darkStyleLookup[name]) {
+        clsObj.dark = true;
+        clsObj.darkProps = darkStyleLookup[name];
+      }
+      newClasses.push(clsObj); 
     }
   }
 
@@ -244,7 +283,10 @@ function parseMjmlToTree(src){
   if (!bodyEl) throw new Error('No <mj-body> found in MJML.');
   
   const bodyNode = parseEl(bodyEl);
-  bodyNode.id = 'root';
+  // Ensure the body ID remains 'root' if it was root, or adopt the detected ID
+  if (!m && !bodyEl.getAttribute('css-class')?.includes('mja-')) {
+    bodyNode.id = 'root'; 
+  }
   
   return { tree: [bodyNode], newClasses };
 }
