@@ -178,16 +178,11 @@ const app = createApp({
 
     // Classes
     const newClassName = ref('');
-    const classes = ref([
-      {name:'body-bg',    props:{'background-color':'#f4f4f4'}, dark:true, darkProps:{'background-color':'#0d0d0d'}, _open:false,_pk:'',_pv:'',_dpk:'',_dpv:'',_sides:{}},
-      {name:'text-default', props:{'color':'#1e293b', 'font-size':'14px', 'line-height':'1.6'}, dark:true, darkProps:{'color':'#ffffff'}, _open:false,_pk:'',_pv:'',_dpk:'',_dpv:'',_sides:{}},
-      {name:'btn-primary', props:{'background-color':'#4f46e5', 'color':'#ffffff', 'font-weight':'bold', 'border-radius':'6px', 'padding':'12px 24px'}, dark:false, darkProps:{}, _open:false,_pk:'',_pv:'',_dpk:'',_dpv:'',_sides:{}},
-      {name:'section-default', props:{'padding':'20px'}, dark:false, darkProps:{}, _open:false,_pk:'',_pv:'',_dpk:'',_dpv:'',_sides:{}}
-    ]);
+    const classes = ref([]);
 
     // Document tree
     const tree = ref([{
-      id:'root', type:'mj-body', classes:['body-bg'], attrs:{}, content:'',
+      id:'root', type:'mj-body', classes:[], attrs:{}, content:'',
       children:[]
     }]);
 
@@ -299,7 +294,7 @@ const app = createApp({
 
     function clearDoc(){
       if(!confirm('Clear entire document?'))return;
-      tree.value=[{id:'root',type:'mj-body',classes:['body-bg'],attrs:{},content:'',children:[]}];
+      tree.value=[{id:'root',type:'mj-body',classes:[],attrs:{},content:'',children:[]}];
       selectedId.value=null;
     }
     function cloneNode(tpl){
@@ -1137,13 +1132,8 @@ const app = createApp({
     }
 
     function executeNewEmail() {
-      tree.value = [{id:'root',type:'mj-body',classes:['body-bg'],attrs:{},style:{},content:'',children:[]}];
-      classes.value = [
-        {name:'body-bg',    props:{'background-color':'#f4f4f4'}, _open:false,_pk:'',_pv:''},
-        {name:'text-default', props:{'color':'#1e293b', 'font-size':'14px', 'line-height':'1.6'}, _open:false,_pk:'',_pv:''},
-        {name:'btn-primary', props:{'background-color':'#4f46e5', 'color':'#ffffff', 'font-weight':'bold', 'border-radius':'6px', 'padding':'12px 24px'}, _open:false,_pk:'',_pv:''},
-        {name:'section-default', props:{'padding':'20px'}, _open:false,_pk:'',_pv:''}
-      ];
+      tree.value = [{id:'root',type:'mj-body',classes:[],attrs:{},style:{},content:'',children:[]}];
+      classes.value = [];
       undoStack.value = [];
       redoStack.value = [];
       pushUndoState();

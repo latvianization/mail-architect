@@ -6,10 +6,7 @@ const iconFor = t => iconMap[t] || 'fa-solid fa-cube';
 function makeNode(type, withScaffold = false) {
 
   const isContainer = containerTypes.has(type);
-  let classes = [];
-  if (type === 'mj-text') classes = ['text-default'];
-  if (type === 'mj-button') classes = ['btn-primary'];
-  if (type === 'mj-section') classes = ['section-default'];
+  const classes = [];
 
   const node = {
     id: uid(), type,
