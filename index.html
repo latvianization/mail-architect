@@ -89,7 +89,7 @@
         <!-- Structure Tree -->
         <div class="tree-panel" :style="{width: treeW+'px'}">
           <div class="sidebar-title">
-            <span>Structure</span>
+            <span><i class="fa-solid fa-sitemap"></i> Structure</span>
           </div>
           
           <div class="tree-scroll">
@@ -246,16 +246,27 @@
                 <button class="prop-del" @click="deleteClass(cname)" title="Delete Class Globally"><i class="fa-solid fa-trash-can"></i></button>
               </div>
               <div class="p-2 bg-white" v-if="getClassObj(cname)">
-                <!-- Visual Property Editor (Light) -->
-                <visual-editor :cls="getClassObj(cname)" :is-dark="false" :defs="PROP_DEFS" :categories="PROP_CATEGORIES" :helpers="editorHelpers">
-                  <template #footer>
-                    <div class="dark-section mt-3">
-                      <div class="inspector-section-label sm" style="color:rgba(255,255,255,0.4);border:none">Dark Mode Overrides</div>
-                      <!-- Visual Property Editor (Dark) -->
+                <!-- Theme Accordion -->
+                <div class="theme-accordion">
+                  <!-- Light Block -->
+                  <div class="theme-segment" :class="{active: getActiveTheme(getClassObj(cname)) === 'light'}">
+                    <div class="theme-segment-hdr" @click="setActiveTheme(getClassObj(cname), 'light')">
+                      <i class="fa-solid fa-sun me-2"></i> Light Mode Attributes
+                    </div>
+                    <div class="theme-segment-body" v-if="getActiveTheme(getClassObj(cname)) === 'light'">
+                      <visual-editor :cls="getClassObj(cname)" :is-dark="false" :defs="PROP_DEFS" :categories="PROP_CATEGORIES" :helpers="editorHelpers"></visual-editor>
+                    </div>
+                  </div>
+                  <!-- Dark Block -->
+                  <div class="theme-segment" :class="{active: getActiveTheme(getClassObj(cname)) === 'dark'}">
+                    <div class="theme-segment-hdr" @click="setActiveTheme(getClassObj(cname), 'dark')">
+                      <i class="fa-solid fa-moon me-2"></i> Dark Mode Overrides
+                    </div>
+                    <div class="theme-segment-body" v-if="getActiveTheme(getClassObj(cname)) === 'dark'">
                       <visual-editor :cls="getClassObj(cname)" :is-dark="true" :defs="PROP_DEFS" :categories="PROP_CATEGORIES" :helpers="editorHelpers"></visual-editor>
                     </div>
-                  </template>
-                </visual-editor>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -265,7 +276,7 @@
             <div class="inspector-section-label">Inline CSS</div>
             <div class="cls-card-modern open">
               <div class="p-2 bg-white">
-                <visual-editor :cls="selectedNode" :is-dark="false" :defs="PROP_DEFS" :categories="PROP_CATEGORIES" :helpers="editorHelpers"></visual-editor>
+                <visual-editor :cls="selectedNode" :is-dark="false" :defs="PROP_DEFS" :categories="PROP_CATEGORIES" :helpers="editorHelpers" :is-inline="true"></visual-editor>
               </div>
             </div>
           </div>
@@ -306,14 +317,24 @@
               </div>
             </div>
             <div class="p-2 bg-white" v-show="cls._open">
-              <visual-editor :cls="cls" :is-dark="false" :defs="PROP_DEFS" :categories="PROP_CATEGORIES" :helpers="editorHelpers">
-                <template #footer>
-                  <div class="dark-section mt-3">
-                    <div class="inspector-section-label sm" style="color:rgba(255,255,255,0.4);border:none">Dark Mode Overrides</div>
+              <div class="theme-accordion">
+                <div class="theme-segment" :class="{active: getActiveTheme(cls) === 'light'}">
+                  <div class="theme-segment-hdr" @click="setActiveTheme(cls, 'light')">
+                    <i class="fa-solid fa-sun me-2"></i> Light Mode
+                  </div>
+                  <div class="theme-segment-body" v-if="getActiveTheme(cls) === 'light'">
+                    <visual-editor :cls="cls" :is-dark="false" :defs="PROP_DEFS" :categories="PROP_CATEGORIES" :helpers="editorHelpers"></visual-editor>
+                  </div>
+                </div>
+                <div class="theme-segment" :class="{active: getActiveTheme(cls) === 'dark'}">
+                  <div class="theme-segment-hdr" @click="setActiveTheme(cls, 'dark')">
+                    <i class="fa-solid fa-moon me-2"></i> Dark Mode
+                  </div>
+                  <div class="theme-segment-body" v-if="getActiveTheme(cls) === 'dark'">
                     <visual-editor :cls="cls" :is-dark="true" :defs="PROP_DEFS" :categories="PROP_CATEGORIES" :helpers="editorHelpers"></visual-editor>
                   </div>
-                </template>
-              </visual-editor>
+                </div>
+              </div>
             </div>
           </div>
           

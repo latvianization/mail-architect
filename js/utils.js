@@ -38,11 +38,11 @@ function deepCloneNode(node) {
     style: { ...(node.style || {}) }
   };
 
-  
+
   if (node.children) {
     clone.children = node.children.map(c => deepCloneNode(c));
   }
-  
+
   return clone;
 }
 
@@ -52,7 +52,7 @@ function checkDrop(parentType, dragEl) {
   // Account for dragging from sidebar or within tree
   let target = dragEl.getAttribute('data-type') ? dragEl : dragEl.querySelector('[data-type]');
   if (!target && dragEl.closest) target = dragEl.closest('[data-type]');
-  
+
   const dragType = target ? target.getAttribute('data-type') : null;
   if (!dragType) return false;
   if (!allowedChildrenMap[parentType]) return false;
@@ -61,86 +61,65 @@ function checkDrop(parentType, dragEl) {
 
 // ── Color helpers ──────────────────────────────────────
 const COLOR_PROP_KEYS = new Set([
-  'color','background-color','border-color',
+  'color', 'background-color', 'border-color',
 ]);
 
-function isColorProp(key){
-  if(!key) return false;
+function isColorProp(key) {
+  if (!key) return false;
   return COLOR_PROP_KEYS.has(key) || key.includes('color') || key.includes('background');
 }
 
 // Convert any CSS color string to #rrggbb that <input type=color> accepts
-function colorToHex(val){
-  if(!val || typeof val !== 'string') return '#000000';
+function colorToHex(val) {
+  if (!val || typeof val !== 'string') return '#000000';
   const v = val.trim();
   // Already 6-digit hex
-  if(/^#[0-9a-f]{6}$/i.test(v)) return v.toLowerCase();
+  if (/^#[0-9a-f]{6}$/i.test(v)) return v.toLowerCase();
   // Expand 3-digit hex
-  if(/^#[0-9a-f]{3}$/i.test(v)) return '#'+v[1]+v[1]+v[2]+v[2]+v[3]+v[3];
+  if (/^#[0-9a-f]{3}$/i.test(v)) return '#' + v[1] + v[1] + v[2] + v[2] + v[3] + v[3];
   // Use canvas to convert rgb/hsl/named colors
-  try{
-    const c=document.createElement('canvas'); c.width=c.height=1;
-    const ctx=c.getContext('2d'); ctx.fillStyle=v; ctx.fillRect(0,0,1,1);
-    const d=ctx.getImageData(0,0,1,1).data;
-    return '#'+[d[0],d[1],d[2]].map(n=>n.toString(16).padStart(2,'0')).join('');
-  }catch{ return '#000000'; }
+  try {
+    const c = document.createElement('canvas'); c.width = c.height = 1;
+    const ctx = c.getContext('2d'); ctx.fillStyle = v; ctx.fillRect(0, 0, 1, 1);
+    const d = ctx.getImageData(0, 0, 1, 1).data;
+    return '#' + [d[0], d[1], d[2]].map(n => n.toString(16).padStart(2, '0')).join('');
+  } catch { return '#000000'; }
 }
 
-function disableSystemDark(html){
-  if(!html) return '';
-  return html.replace(/@media\s*\(\s*prefers-color-scheme\s*:\s*dark\s*\)/gi, '@media (prefers-color-scheme: disabled-mode)');
-}
-
-function stripDivTypography(html) {
-  if(!html) return html;
-  return html.replace(/<div([^>]*)style="([^"]*)"([^>]*)>/gi, (match, prefix, style, postfix) => {
-    let s = style.replace(/(?:^|;)\s*(?:font-family|font-size|font-weight|line-height|text-align|color)\s*:[^;]+/gi, '');
-    s = s.replace(/^;+/, '').replace(/;+/g, ';').trim();
-    if(!s || s === ';') return `<div${prefix}${postfix}>`;
-    return `<div${prefix}style="${s}"${postfix}>`;
-  });
-}
 
 // ── MJML compilation helpers ────────────────────────────────
-function buildAttrs(node){
-  let s='';
-  if(node.classes&&node.classes.length) s+=` mj-class="${node.classes.join(' ')}"`;
-  
-  const cssClasses=[`mja-${node.id}`];
-  if(node.classes&&node.classes.length) cssClasses.push(...node.classes);
-  s+=` css-class="${cssClasses.join(' ')}"`;
-  
-  if(node.attrs){
-    for(const[k,v]of Object.entries(node.attrs)){
-      if(v!==undefined&&v!==null&&v!=='') s+=` ${k}="${String(v).replace(/"/g,'&quot;')}"`;
+function buildAttrs(node) {
+  let s = '';
+  if (node.classes && node.classes.length) s += ` mj-class="${node.classes.join(' ')}"`;
+
+  const cssClasses = [`mja-${node.id}`];
+  if (node.classes && node.classes.length) cssClasses.push(...node.classes);
+  s += ` css-class="${cssClasses.join(' ')}"`;
+
+  if (node.attrs) {
+    for (const [k, v] of Object.entries(node.attrs)) {
+      if (v !== undefined && v !== null && v !== '') s += ` ${k}="${String(v).replace(/"/g, '&quot;')}"`;
     }
   }
 
   // Handle Inline Styles
-  if(node.style && Object.keys(node.style).length > 0) {
+  if (node.style && Object.keys(node.style).length > 0) {
     const inlineStyles = [];
-    const mjAttributes = ['mj-text','mj-button','mj-column','mj-section','mj-hero','mj-wrapper','mj-image','mj-divider','mj-spacer','mj-social','mj-social-element','mj-navbar','mj-navbar-link','mj-accordion','mj-accordion-element','mj-accordion-title','mj-accordion-text','mj-table'];
-    
-    // Properties that MJML supports as direct attributes on almost all tags
-    const stdMjmlAttrs = new Set(['align','background-color','border','border-bottom','border-left','border-right','border-top','border-radius','color','container-background-color','direction','font-family','font-size','font-style','font-weight','height','letter-spacing','line-height','padding','padding-bottom','padding-left','padding-right','padding-top','text-align','text-decoration','vertical-align','width','src','href','target','alt','mode']);
-    
-    // Synthesize 'border' if individual components are present but 'border' itself is not
-    if (!node.style['border'] && (node.style['border-width'] || node.style['border-style'] || node.style['border-color'])) {
-      const bw = node.style['border-width'] || '1px';
-      const bs = node.style['border-style'] || 'solid';
-      const bc = node.style['border-color'] || '#000000';
-      s += ` border="${bw} ${bs} ${bc}"`;
-    }
+    const mjAttributes = ['mj-text', 'mj-button', 'mj-column', 'mj-section', 'mj-hero', 'mj-wrapper', 'mj-image', 'mj-divider', 'mj-spacer', 'mj-social', 'mj-social-element', 'mj-navbar', 'mj-navbar-link', 'mj-accordion', 'mj-accordion-element', 'mj-accordion-title', 'mj-accordion-text', 'mj-table'];
 
-    for(const [k,v] of Object.entries(node.style)) {
-      if(v === undefined || v === null || v === '' || k === 'border-width' || k === 'border-style' || k === 'border-color') continue;
-      if(stdMjmlAttrs.has(k)) {
-        s += ` ${k}="${String(v).replace(/"/g,'&quot;')}"`;
+    // Properties that MJML supports as direct attributes on almost all tags
+    const stdMjmlAttrs = new Set(['align', 'background-color', 'border', 'border-bottom', 'border-left', 'border-right', 'border-top', 'border-radius', 'color', 'container-background-color', 'direction', 'font-family', 'font-size', 'font-style', 'font-weight', 'height', 'letter-spacing', 'line-height', 'padding', 'padding-bottom', 'padding-left', 'padding-right', 'padding-top', 'text-align', 'text-decoration', 'vertical-align', 'width', 'src', 'href', 'target', 'alt', 'mode']);
+
+
+    for (const [k, v] of Object.entries(node.style)) {
+      if (v === undefined || v === null || v === '' || k === 'border-width' || k === 'border-style' || k === 'border-color') continue;
+      if (stdMjmlAttrs.has(k)) {
+        s += ` ${k}="${String(v).replace(/"/g, '&quot;')}"`;
       } else {
         inlineStyles.push(`${k}:${v}`);
       }
     }
-    if(inlineStyles.length > 0) {
+    if (inlineStyles.length > 0) {
       s += ` style="${inlineStyles.join(';')}"`;
     }
   }
@@ -149,31 +128,31 @@ function buildAttrs(node){
 }
 
 
-function compileNode(node,depth){
-  const pad='  '.repeat(depth);
-  const attrs=buildAttrs(node);
-  const isLeaf=node.children===undefined;
-  if(isLeaf&&!node.content) return `${pad}<${node.type}${attrs} />`;
-  let out=`${pad}<${node.type}${attrs}>`;
-  if(node.content){
-    let c=node.content;
-    out+='\n'+'  '.repeat(depth+1)+c;
+function compileNode(node, depth) {
+  const pad = '  '.repeat(depth);
+  const attrs = buildAttrs(node);
+  const isLeaf = node.children === undefined;
+  if (isLeaf && !node.content) return `${pad}<${node.type}${attrs} />`;
+  let out = `${pad}<${node.type}${attrs}>`;
+  if (node.content) {
+    let c = node.content;
+    out += '\n' + '  '.repeat(depth + 1) + c;
   }
-  if(node.children){ if(node.children.length){out+='\n';for(const c of node.children)out+=compileNode(c,depth+1)+'\n';out+=pad;} }
-  out+=`</${node.type}>`;
+  if (node.children) { if (node.children.length) { out += '\n'; for (const c of node.children) out += compileNode(c, depth + 1) + '\n'; out += pad; } }
+  out += `</${node.type}>`;
   return out;
 }
 
 // ── Import helper ───────────────────────────────────────────
-function parseMjmlToTree(src){
+function parseMjmlToTree(src) {
   const parser = new DOMParser();
   // Use text/html to be permissive with loose HTML tags (like <br> or <img>)
   // that are common in MJML but invalid in strict XML.
   const doc = parser.parseFromString(src, 'text/html');
-  
+
   const mjStyleLookup = {}; // Map of .mja-{id} -> props
   const darkStyleLookup = {}; // Map of .classname -> props
-  
+
   const styleEl = doc.querySelector('mj-style');
   if (styleEl) {
     const css = styleEl.textContent;
@@ -202,7 +181,7 @@ function parseMjmlToTree(src){
   }
 
   function parseEl(el) {
-    const type = el.tagName.toLowerCase(); 
+    const type = el.tagName.toLowerCase();
     const cssClassLine = el.getAttribute('css-class') || el.getAttribute('class') || '';
     const m = cssClassLine.match(/\bmja-([a-z0-9]+)\b/);
     const id = m ? m[1] : uid();
@@ -212,9 +191,9 @@ function parseMjmlToTree(src){
     for (const a of el.attributes) {
       if (a.name !== 'mj-class') attrs[a.name] = a.value;
     }
-    
+
     let content = '', children = undefined;
-    
+
     if (TEXT_TYPES.includes(type)) {
       content = el.innerHTML;
     } else {
@@ -225,10 +204,10 @@ function parseMjmlToTree(src){
         }
       }
     }
-    
+
     // Combine styles from 'style' attribute, standard MJML attributes, and mj-style lookup
     const style = {};
-    
+
     // 1. From style attribute
     const styleAttr = el.getAttribute('style');
     if (styleAttr) {
@@ -237,14 +216,14 @@ function parseMjmlToTree(src){
         if (k && v) style[k.trim()] = v.trim();
       });
     }
-    
+
     // 2. From standard MJML attributes
-    const stdMjmlAttrs = ['align','background-color','border','border-bottom','border-left','border-right','border-top','border-radius','color','container-background-color','direction','font-family','font-size','font-style','font-weight','height','letter-spacing','line-height','padding','padding-bottom','padding-left','padding-right','padding-top','text-align','text-decoration','vertical-align','width','src','href','target','alt','mode'];
+    const stdMjmlAttrs = ['align', 'background-color', 'border', 'border-bottom', 'border-left', 'border-right', 'border-top', 'border-radius', 'color', 'container-background-color', 'direction', 'font-family', 'font-size', 'font-style', 'font-weight', 'height', 'letter-spacing', 'line-height', 'padding', 'padding-bottom', 'padding-left', 'padding-right', 'padding-top', 'text-align', 'text-decoration', 'vertical-align', 'width', 'src', 'href', 'target', 'alt', 'mode'];
     stdMjmlAttrs.forEach(a => {
       const val = el.getAttribute(a);
       if (val) {
         style[a] = val;
-        attrs[a] = undefined; 
+        attrs[a] = undefined;
       }
     });
 
@@ -266,25 +245,25 @@ function parseMjmlToTree(src){
       for (const a of c.attributes) {
         if (a.name !== 'name') props[a.name] = a.value;
       }
-      
+
       const clsObj = { name, props, _open: false, _pk: '', _pv: '', dark: false, darkProps: {} };
       if (darkStyleLookup[name]) {
         clsObj.dark = true;
         clsObj.darkProps = darkStyleLookup[name];
       }
-      newClasses.push(clsObj); 
+      newClasses.push(clsObj);
     }
   }
 
   const bodyEl = doc.querySelector('mj-body');
   if (!bodyEl) throw new Error('No <mj-body> found in MJML.');
-  
+
   const bodyNode = parseEl(bodyEl);
   // Ensure the body ID remains 'root' if it was root, or adopt the detected ID
   if (!m && !bodyEl.getAttribute('css-class')?.includes('mja-')) {
-    bodyNode.id = 'root'; 
+    bodyNode.id = 'root';
   }
-  
+
   return { tree: [bodyNode], newClasses };
 }
 

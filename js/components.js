@@ -97,99 +97,111 @@ const TreeNodeComp = {
 // ── Visual Property Editor Component ──────────────────────────────
 const VisualEditorComp = {
   name: 'visual-editor',
-  props: ['cls', 'isDark', 'defs', 'categories', 'helpers'],
+  props: ['cls', 'isDark', 'defs', 'categories', 'helpers', 'isInline'],
   template: `
-    <div class="visual-editor">
-      <div v-for="cat in categories" :key="cat.name" class="prop-category" :class="{open: helpers.isCategoryOpen(cls, cat.name, isDark)}">
-        <div class="prop-category-header" @click="helpers.toggleCategory(cls, cat.name, isDark)">
-          <i class="fa-solid prop-category-icon" :class="cat.icon"></i>
-          <span class="prop-category-title">{{cat.name}}</span>
-          <i class="fa-solid fa-chevron-down prop-category-arrow"></i>
-        </div>
-        <div class="prop-category-body" v-if="helpers.isCategoryOpen(cls, cat.name, isDark)">
-          <div v-for="pkey in cat.props" :key="pkey" class="prop-control">
-            <template v-if="defs[pkey]">
-              <div class="prop-control-header">
-                <span class="prop-control-label">
+    <div class="visual-editor-compact">
+
+      <!-- Property Grid -->
+      <div class="prop-grid">
+        <template v-for="cat in categories" :key="cat.name">
+          <template v-for="pkey in cat.props" :key="pkey">
+            <div v-if="shouldShow(pkey)" class="prop-item-compact" :class="{'prop-item-full': defs[pkey].type==='sides'}">
+              <template v-if="defs[pkey]">
+                <div class="prop-item-label" :title="pkey">
                   <i class="fa-solid" :class="defs[pkey].icon"></i>
-                  {{pkey}}
-                </span>
-                <label v-if="defs[pkey].type==='sides'" class="sides-toggle-wrap">
-                  <input type="checkbox" :checked="helpers.isSidesEnabled(cls, pkey, isDark)" @change="helpers.toggleSides(cls, pkey, isDark)">
-                  Individual
-                </label>
-              </div>
-
-              <div v-if="defs[pkey].type==='slider'" class="prop-slider-wrap">
-                <input type="range" class="prop-slider" 
-                       :min="defs[pkey].min" :max="defs[pkey].max" :step="defs[pkey].step||1"
-                       :value="helpers.getPropNumeric(cls, pkey, isDark)"
-                       @input="helpers.setPropNumeric(cls, pkey, $event.target.value, defs[pkey].unit, isDark)">
-                <span class="prop-slider-val">{{helpers.getPropNumeric(cls, pkey, isDark)}}{{defs[pkey].unit}}</span>
-              </div>
-
-              <select v-else-if="defs[pkey].type==='select'" class="field-select" 
-                      :value="helpers.getPropValue(cls, pkey, isDark)"
-                      @change="helpers.setPropValue(cls, pkey, $event.target.value, isDark)">
-                <option v-for="opt in defs[pkey].options" :key="opt" :value="opt">{{opt}}</option>
-              </select>
-
-              <div v-else-if="defs[pkey].type==='color'" class="color-picker-wrap">
-                <div class="color-swatch-btn" :style="{background:helpers.getPropValue(cls, pkey, isDark)||'#000'}">
-                  <input type="color" :value="helpers.colorToHex(helpers.getPropValue(cls, pkey, isDark)||'#000000')" 
-                         @input="helpers.setPropValue(cls, pkey, $event.target.value, isDark)">
+                  <span>{{pkey}}</span>
                 </div>
-                <input class="field-input py-1" :value="helpers.getPropValue(cls, pkey, isDark)" @input="helpers.setPropValue(cls, pkey, $event.target.value, isDark)">
-              </div>
-
-              <div v-else-if="defs[pkey].type==='sides'">
-                <div v-if="!helpers.isSidesEnabled(cls, pkey, isDark)" class="prop-slider-wrap">
-                  <input type="range" class="prop-slider" 
-                         :min="defs[pkey].min" :max="defs[pkey].max"
-                         :value="helpers.getPropNumeric(cls, pkey, isDark)"
-                         @input="helpers.setPropNumeric(cls, pkey, $event.target.value, defs[pkey].unit, isDark)">
-                  <span class="prop-slider-val">{{helpers.getPropNumeric(cls, pkey, isDark)}}{{defs[pkey].unit}}</span>
-                </div>
-                <div v-else class="sides-grid">
-                  <div v-for="s in ['top','right','bottom','left']" :key="s" class="side-item">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                      <span class="side-label">{{s}}</span>
-                      <span class="side-val" style="font-size:9px; font-weight:700; color:#6366f1">{{helpers.getSidesNumeric(cls, pkey, s, isDark)}}</span>
+                
+                <div class="prop-item-controls">
+                  <!-- Color Picker -->
+                  <div v-if="defs[pkey].type==='color'" class="color-compact">
+                    <div class="color-swatch-mini" :style="{background:helpers.getPropValue(cls, pkey, isDark)||'#000'}">
+                      <input type="color" :value="helpers.colorToHex(helpers.getPropValue(cls, pkey, isDark)||'#000000')" 
+                             @input="helpers.setPropValue(cls, pkey, $event.target.value, isDark)">
                     </div>
-                    <input type="range" class="prop-slider mini" 
-                           :min="defs[pkey].min" :max="defs[pkey].max"
-                           :value="helpers.getSidesNumeric(cls, pkey, s, isDark)"
-                           @input="helpers.setSidesNumeric(cls, pkey, s, $event.target.value, defs[pkey].unit, isDark)">
+                    <input class="prop-input-mini" :value="helpers.getPropValue(cls, pkey, isDark)" @input="helpers.setPropValue(cls, pkey, $event.target.value, isDark)">
                   </div>
+
+                  <!-- Select -->
+                  <select v-else-if="defs[pkey].type==='select'" class="prop-select-mini w-100" 
+                          :value="helpers.getPropValue(cls, pkey, isDark)"
+                          @change="helpers.setPropValue(cls, pkey, $event.target.value, isDark)">
+                    <option v-for="opt in defs[pkey].options" :key="opt" :value="opt">{{opt}}</option>
+                  </select>
+
+                  <!-- Numeric / Sides -->
+                  <div v-else-if="defs[pkey].type==='slider' || defs[pkey].type==='sides'" class="unit-input-group w-100">
+                     <template v-if="defs[pkey].type==='sides'">
+                        <div class="sides-input-grid">
+                          <div v-for="s in (pkey === 'border-radius' ? ['top-left', 'top-right', 'bottom-right', 'bottom-left'] : ['top','right','bottom','left'])" :key="s" class="side-input-box">
+                            <span class="side-mini-label">
+                              {{ pkey === 'border-radius' 
+                                 ? s.split('-').map(x => x[0].toUpperCase()).join('') 
+                                 : s[0].toUpperCase() }}
+                            </span>
+                            <input type="text" class="prop-input-mini w-100" 
+                                   :value="helpers.getSidesValue(cls, pkey, s, isDark)"
+                                   @input="helpers.setSidesValue(cls, pkey, s, $event.target.value, isDark)">
+                          </div>
+                        </div>
+                     </template>
+                     <template v-else>
+                        <input type="text" class="prop-input-mini w-100" 
+                               :value="helpers.getPropValue(cls, pkey, isDark)"
+                               @input="helpers.setPropValue(cls, pkey, $event.target.value, isDark)">
+                     </template>
+                  </div>
+
+                  <input v-else class="prop-input-mini w-100" :value="helpers.getPropValue(cls, pkey, isDark)" @input="helpers.setPropValue(cls, pkey, $event.target.value, isDark)">
+                  
+                  <button v-if="isInline" class="prop-del-mini ms-1" @click="helpers.deleteProp(cls, pkey, isDark)"><i class="fa-solid fa-trash-can"></i></button>
                 </div>
-              </div>
-            </template>
-          </div>
-        </div>
+              </template>
+            </div>
+          </template>
+        </template>
       </div>
 
-      <!-- Advanced / Custom Properties Section -->
-      <div class="prop-category" :class="{open: helpers.isCategoryOpen(cls, 'Advanced', isDark)}">
-        <div class="prop-category-header" @click="helpers.toggleCategory(cls, 'Advanced', isDark)">
-          <i class="fa-solid prop-category-icon fa-gears"></i>
-          <span class="prop-category-title">Other Properties</span>
-          <i class="fa-solid fa-chevron-down prop-category-arrow"></i>
+      <!-- Advanced / Other properties flattened -->
+      <div class="advanced-mini">
+        <div v-for="(v,k) in helpers.getCustomProps(cls, isDark)" :key="k" class="prop-item-compact">
+           <div class="prop-item-label">{{k}}</div>
+           <div class="prop-item-controls">
+              <input class="prop-input-mini w-100" :value="v" @input="helpers.setPropValue(cls, k, $event.target.value, isDark)">
+              <button class="prop-del-mini" @click="helpers.deleteProp(cls, k, isDark)"><i class="fa-solid fa-xmark"></i></button>
+           </div>
         </div>
-        <div class="prop-category-body" v-if="helpers.isCategoryOpen(cls, 'Advanced', isDark)">
-          <div v-for="(v,k) in helpers.getCustomProps(cls, isDark)" :key="k" class="prop-row">
-            <span class="prop-key" :title="k">{{k}}</span>
-            <input class="prop-val" :value="v" @input="helpers.setPropValue(cls, k, $event.target.value, isDark)">
-            <button class="prop-del" @click="helpers.deleteProp(cls, k, isDark)"><i class="fa-solid fa-xmark"></i></button>
-          </div>
-          <div class="mt-2 pt-2 border-top">
-            <input class="field-input py-1" list="prop-hints" placeholder="+ Add property (e.g. max-width)" 
-                   @keyup.enter="helpers.addCustomProp(cls, $event.target.value, isDark); $event.target.value=''">
-          </div>
+        <div v-if="!isInline || !isDark" class="add-prop-mini">
+          <input class="prop-input-mini w-100" list="prop-hints" placeholder="+ New custom property..." 
+                 @keyup.enter="helpers.addCustomProp(cls, $event.target.value, isDark); $event.target.value=''">
         </div>
       </div>
 
       <slot name="footer"></slot>
     </div>
+  `,
+  methods: {
+    shouldShow(pkey) {
+      if (!this.cls) return false;
+      
+      // Inline CSS (Light Mode): Only show if explicitly set in attrs or style
+      if (this.isInline && !this.isDark) {
+        const hasAttr = this.cls.attrs && this.cls.attrs[pkey] !== undefined;
+        const hasStyle = this.cls.style && this.cls.style[pkey] !== undefined;
+        return hasAttr || hasStyle;
+      }
 
-  `
+      // Dark Mode (Classes and Inline): Only show if set in Light Mode
+      if (this.isDark) {
+        if (this.isInline) {
+          return (this.cls.attrs && this.cls.attrs[pkey] !== undefined) || (this.cls.style && this.cls.style[pkey] !== undefined);
+        } else {
+          return this.cls.props && this.cls.props[pkey] !== undefined;
+        }
+      }
+
+      // Global Classes (Light Mode): Show all attributes
+      return true;
+    }
+  }
 };

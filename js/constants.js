@@ -102,13 +102,12 @@ const PROP_DEFS = {
   'font-weight':    { type: 'select', options: ['300', '400', '500', '600', '700', '800', 'normal', 'bold'], icon: 'fa-bold' },
   'line-height':    { type: 'slider', min: 1, max: 3, step: 0.1, unit: '', icon: 'fa-line-height' },
   'letter-spacing': { type: 'slider', min: -2, max: 10, unit: 'px', icon: 'fa-arrows-left-right' },
-  'text-align':     { type: 'select', options: ['left', 'center', 'right', 'justify'], icon: 'fa-align-left' },
-  'align':          { type: 'select', options: ['left', 'center', 'right'], icon: 'fa-align-justify' },
+  'align':          { type: 'select', options: ['left', 'center', 'right', 'justify'], icon: 'fa-align-justify' },
   'color':          { type: 'color', icon: 'fa-droplet' },
   'background-color':{ type: 'color', icon: 'fa-fill-drip' },
   'padding':        { type: 'sides', min: 0, max: 100, unit: 'px', icon: 'fa-expand' },
   'margin':         { type: 'sides', min: 0, max: 100, unit: 'px', icon: 'fa-compress' },
-  'border-radius':  { type: 'slider', min: 0, max: 100, unit: 'px', icon: 'fa-circle-notch' },
+  'border-radius':  { type: 'sides', min: 0, max: 100, unit: 'px', icon: 'fa-circle-notch' },
   'border-width':   { type: 'slider', min: 0, max: 20, unit: 'px', icon: 'fa-border-all' },
   'border-style':   { type: 'select', options: ['none', 'solid', 'dashed', 'dotted'], icon: 'fa-border-none' },
   'border-color':   { type: 'color', icon: 'fa-palette' },
@@ -116,7 +115,7 @@ const PROP_DEFS = {
 };
 
 const PROP_CATEGORIES = [
-  { name: 'Typography', icon: 'fa-font', props: ['font-size', 'font-weight', 'line-height', 'letter-spacing', 'text-align', 'align', 'color'] },
+  { name: 'Typography', icon: 'fa-font', props: ['font-size', 'font-weight', 'line-height', 'align', 'color'] },
   { name: 'Spacing',    icon: 'fa-arrows-up-down-left-right', props: ['padding', 'margin'] },
   { name: 'Appearance', icon: 'fa-palette', props: ['background-color', 'width'] },
   { name: 'Borders',    icon: 'fa-square', props: ['border-width', 'border-style', 'border-color', 'border-radius'] },
