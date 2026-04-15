@@ -44,6 +44,8 @@ const defaultContent = {
   'mj-accordion-text':'Accordion content goes here.',
 };
 
+const TEXT_TYPES = ['mj-text', 'mj-button', 'mj-raw', 'mj-social-element', 'mj-navbar-link', 'mj-table', 'mj-accordion-title', 'mj-accordion-text'];
+
 const scaffoldMap = {
   'mj-section':   ['mj-column'],
   'mj-column':    ['mj-text'],

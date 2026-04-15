@@ -7,6 +7,13 @@ const app = createApp({
     const deviceLabel = computed(() => ({ '100%': 'Desktop', '768px': 'Tablet 768px', '414px': 'Mobile L 414px', '375px': 'Mobile S 375px' }[deviceWidth.value] || deviceWidth.value));
     const previewTheme = ref('light');
     const viewMode = ref('builder');
+    const manualMjml = ref('');
+
+    watch(viewMode, (v) => {
+      if (v === 'code') {
+        manualMjml.value = mjmlSource.value;
+      }
+    });
     const showGuides = ref(false);
     const showAdvanced = ref(false);
     const showAdvancedInline = ref(false);
@@ -232,6 +239,27 @@ const app = createApp({
         toast(`Added ${type.replace('mj-', '')} component`);
       }
       closeAddBlock();
+    }
+
+    function applyManualMjml() {
+      if (!manualMjml.value) return;
+      try {
+        const result = parseMjmlToTree(manualMjml.value);
+        if (result.tree && result.tree.length) {
+          tree.value = result.tree;
+          classes.value = result.newClasses || [];
+          viewMode.value = 'builder';
+          selectedId.value = null; // Reset selection to avoid crashes
+          
+          pushUndoState();
+          toast('Sync successful! Visual tree updated.');
+        } else {
+          toast('Error: Failed to parse visual tree from MJML.', false);
+        }
+      } catch (err) {
+        console.error(err);
+        toast('Parse Error: ' + err.message, false);
+      }
     }
 
     function addTemplateFromPopup(type) {
@@ -1364,6 +1392,7 @@ const app = createApp({
       isColorProp, colorToHex,
       mjmlSource, cleanMjmlSource, setDevice, setTheme, copyCode,
       exportOpen, exportTab, exportHtml, openExport, copyHtml, downloadHtml,
+      manualMjml, applyManualMjml,
       toastShow, toastSuccess, toastMsg,
       ioMenuOpen, exportMjml,
       importOpen, importText, importErr, importFileInput, triggerImport, handleFileImport, applyImport, openImportModal,

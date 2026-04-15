@@ -140,10 +140,17 @@
       <!-- Code Mode -->
       <div class="code-view" v-else>
         <div class="code-toolbar">
-          <span style="font-weight:700"><i class="fa-solid fa-terminal me-2"></i>MJML Output</span>
+          <div class="d-flex align-items-center gap-3">
+             <span style="font-weight:700; color:#4f46e5"><i class="fa-solid fa-terminal me-2"></i>MJML SOURCE</span>
+             <button class="btn-sync-code" @click="applyManualMjml">
+               <i class="fa-solid fa-cloud-arrow-up me-1"></i> Apply & Sync to Visual
+             </button>
+          </div>
           <button class="btn-outline-sm" @click="copyCode"><i class="fa-solid fa-copy"></i> Copy</button>
         </div>
-        <div class="code-content"><pre>{{cleanMjmlSource}}</pre></div>
+        <div class="code-content">
+          <textarea class="mjml-editor" v-model="manualMjml" spellcheck="false" placeholder="Write or paste your MJML here..."></textarea>
+        </div>
       </div>
     </main>
 

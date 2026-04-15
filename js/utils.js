@@ -260,7 +260,8 @@ function parseMjmlToTree(src) {
 
   const bodyNode = parseEl(bodyEl);
   // Ensure the body ID remains 'root' if it was root, or adopt the detected ID
-  if (!m && !bodyEl.getAttribute('css-class')?.includes('mja-')) {
+  const hasMja = bodyEl.getAttribute('css-class')?.includes('mja-');
+  if (!hasMja) {
     bodyNode.id = 'root';
   }
 
