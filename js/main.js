@@ -31,6 +31,10 @@ const app = createApp({
     const exportOpen = ref(false);
     const exportTab = ref('light');
     const exportHtml = ref('');
+    const globalProps = ref({});
+    const typeDefaults = ref({});
+    const globalFonts = ref([]);
+    const extraStyle = ref('');
     const exportHtmlDark = ref('');
 
     // Import
@@ -248,6 +252,10 @@ const app = createApp({
         if (result.tree && result.tree.length) {
           tree.value = result.tree;
           classes.value = result.newClasses || [];
+          globalProps.value = result.globalProps || {};
+          typeDefaults.value = result.typeDefaults || {};
+          globalFonts.value = result.globalFonts || [];
+          extraStyle.value = result.extraStyle || '';
           viewMode.value = 'builder';
           selectedId.value = null; // Reset selection to avoid crashes
           
@@ -493,7 +501,7 @@ const app = createApp({
       scheduleRender();
     }
 
-    const stdMjmlAttrs = new Set(['align', 'background-color', 'border', 'border-bottom', 'border-left', 'border-right', 'border-top', 'border-radius', 'color', 'container-background-color', 'direction', 'font-family', 'font-size', 'font-style', 'font-weight', 'height', 'letter-spacing', 'line-height', 'padding', 'padding-bottom', 'padding-left', 'padding-right', 'padding-top', 'text-align', 'text-decoration', 'vertical-align', 'width', 'src', 'href', 'target', 'alt', 'mode']);
+    const stdMjmlAttrs = new Set(['align', 'background-color', 'background-url', 'background-repeat', 'background-size', 'background-position', 'border', 'border-bottom', 'border-left', 'border-right', 'border-top', 'border-radius', 'color', 'container-background-color', 'direction', 'font-family', 'font-size', 'font-style', 'font-weight', 'height', 'letter-spacing', 'line-height', 'padding', 'padding-bottom', 'padding-left', 'padding-right', 'padding-top', 'text-align', 'text-decoration', 'vertical-align', 'width', 'src', 'href', 'target', 'alt', 'mode', 'full-width', 'fluid-on-mobile', 'inner-padding', 'inner-background-color', 'text-transform', 'border-width', 'border-style', 'border-color']);
 
     function deleteProp(obj, key, isDark = false) {
       if (!obj) return;
@@ -594,40 +602,7 @@ const app = createApp({
       scheduleRender();
     }
 
-    function isSidesEnabled(obj, key, isDark = false) {
-      if (!obj) return false;
-      const sidesKey = isDark ? `${key}_dark` : key;
-      return obj._sides && obj._sides[sidesKey];
-    }
 
-    function getSidesValue(obj, key, side, isDark = false) {
-      if (!obj) return '';
-      const k = `${key}-${side}`;
-      const sideVal = getPropValue(obj, k, isDark);
-      if (sideVal !== undefined && sideVal !== '') return sideVal;
-      // Fallback to base attribute (e.g. padding)
-      return getPropValue(obj, key, isDark);
-    }
-
-    function getSidesNumeric(obj, key, side, isDark = false) {
-      return parseFloat(getSidesValue(obj, key, side, isDark)) || 0;
-    }
-
-    function setSidesNumeric(obj, key, side, val, unit = 'px', isDark = false) {
-      setSidesValue(obj, key, side, val + unit, isDark);
-    }
-
-    function setSidesValue(obj, key, side, val, isDark = false) {
-      if (!obj) return;
-      if (isDark) {
-        if (!obj.darkProps) obj.darkProps = {};
-        obj.darkProps[`${key}-${side}`] = val;
-      } else {
-        const target = obj.props || obj.style || obj;
-        target[`${key}-${side}`] = val;
-      }
-      scheduleRender();
-    }
 
 
     // Node helpers
@@ -674,17 +649,20 @@ const app = createApp({
 
       // 2. Generate mj-attributes (only for used classes)
       let attrs = '';
-      for (const cls of classes.value) {
-        if (!usedClasses.has(cls.name)) continue;
-        const mp = getMergedProps(cls.props);
-        const keys = Object.keys(mp);
-        if (keys.length) {
-          const ps = keys.map(k => `${k}="${mp[k]}"`).join(' ');
-          attrs += `      <mj-class name="${cls.name}" ${ps} />\n`;
-        }
+      for (const [tag, props] of Object.entries(typeDefaults.value)) {
+        let s = `      <${tag}`;
+        for (const [k, v] of Object.entries(props)) s += ` ${k}="${v}"`;
+        attrs += s + ' />\n';
       }
+      
+      // Global mj-all
+      if (Object.keys(globalProps.value).length > 0) {
+        let ps = Object.entries(globalProps.value).map(([k,v]) => `${k}="${v}"`).join(' ');
+        attrs += `      <mj-all ${ps} />\n`;
+      }
+      // No longer generating mj-class as per user request
 
-      // 3. Generate Link CSS for used classes
+      // 3. Generate CSS Rules in mj-style for all classes
       let linkCss = '';
       for (const lc of usedClasses) {
         const cls = classes.value.find(c => c.name === lc);
@@ -692,8 +670,13 @@ const app = createApp({
           const mp = getMergedProps(cls.props);
           linkCss += `      .${lc} {\n`;
           for (const [k, v] of Object.entries(mp)) {
-            if (v !== undefined && v !== null && v !== '' && !stdMjmlAttrs.has(k)) {
-              linkCss += `        ${k}: ${v} !important;\n`;
+            if (v !== undefined && v !== null && v !== '') {
+              // Map MJML specific attributes to CSS where necessary
+              let cssK = k;
+              if (k === 'align') cssK = 'text-align';
+              if (k === 'container-background-color') cssK = 'background-color';
+              
+              linkCss += `        ${cssK}: ${v};\n`;
             }
           }
           linkCss += `      }\n`;
@@ -745,12 +728,13 @@ const app = createApp({
       let inlineStyleRules = '';
       function scanInline(nodes) {
         for (const n of nodes) {
-          if (n.style && Object.keys(n.style).length > 0) {
+          const inlineProps = Object.entries(n.style || {}).filter(([k, v]) => {
+            return v !== undefined && v !== null && v !== '' && !stdMjmlAttrs.has(k);
+          });
+          if (inlineProps.length > 0) {
             inlineStyleRules += `      .mja-${n.id} {\n`;
-            for (const [k, v] of Object.entries(n.style)) {
-              if (v !== undefined && v !== null && v !== '' && !stdMjmlAttrs.has(k)) {
-                inlineStyleRules += `        ${k}: ${v} !important;\n`;
-              }
+            for (const [k, v] of inlineProps) {
+              inlineStyleRules += `        ${k}: ${v} !important;\n`;
             }
             inlineStyleRules += `      }\n`;
           }
@@ -759,13 +743,23 @@ const app = createApp({
       }
       scanInline(tree.value);
 
-      const styleComb = (linkCss + darkCss + inlineStyleRules).trim();
+      // 6. Generate Fonts
+      let fonts = '';
+      if (globalFonts.value.length === 0) {
+        fonts = '    <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />\n';
+      } else {
+        for (const f of globalFonts.value) {
+          fonts += `    <mj-font name="${f.name}" href="${f.href}" />\n`;
+        }
+      }
+
+      const styleComb = (linkCss + darkCss + inlineStyleRules + '\n' + (extraStyle.value || '')).trim();
       const stylePart = styleComb ? `    <mj-style>\n      ${styleComb}\n    </mj-style>\n` : '';
 
       let body = '';
-      for (const n of tree.value) body += compileNode(n, 1) + '\n';
+      for (const n of tree.value) body += compileNode(n, 1, globalProps.value, typeDefaults.value) + '\n';
 
-      return `<mjml>\n  <mj-head>\n    <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />\n    <mj-attributes>\n${attrs}    </mj-attributes>\n${stylePart}  </mj-head>\n${body}</mjml>`;
+      return `<mjml>\n  <mj-head>\n${fonts}    <mj-attributes>\n${attrs}    </mj-attributes>\n${stylePart}  </mj-head>\n${body}</mjml>`;
     });
 
 
@@ -1040,8 +1034,8 @@ const app = createApp({
         let html = r.html;
         
         const currentHoverStyle = `<style id="mja-hl-style">
-          .mja-hl{outline:2px solid rgba(99,102,241,0.5)!important;outline-offset:1px!important;border-radius:2px!important;}
-          .mja-selected{outline:2px solid #6366f1!important;outline-offset:1px!important;border-radius:2px!important;box-shadow:0 0 0 4px rgba(99,102,241,0.1)!important;}
+          .mja-hl{outline:2px solid rgba(99,102,241,0.5)!important;outline-offset:1px!important;}
+          .mja-selected{outline:2px solid #6366f1!important;outline-offset:1px!important;box-shadow:0 0 0 4px rgba(99,102,241,0.1)!important;}
           
           html { background-color: #f1f5f9; color-scheme: ${previewTheme.value}; }
           body {
@@ -1195,15 +1189,17 @@ const app = createApp({
       }
       importErr.value = '';
       try {
-        const { tree: newTree, newClasses } = parseMjmlToTree(importText.value);
-        if (!newTree || newTree.length === 0) {
+        const result = parseMjmlToTree(importText.value);
+        if (!result.tree || result.tree.length === 0) {
           throw new Error('No valid MJML structure found in input.');
         }
 
-        tree.value = newTree;
-        if (newClasses && newClasses.length > 0) {
-          classes.value = newClasses;
-        }
+        tree.value = result.tree;
+        classes.value = result.newClasses || [];
+        globalProps.value = result.globalProps || {};
+        typeDefaults.value = result.typeDefaults || {};
+        globalFonts.value = result.globalFonts || [];
+        extraStyle.value = result.extraStyle || '';
 
         selectedId.value = null;
         importOpen.value = false;
@@ -1250,6 +1246,10 @@ const app = createApp({
         localStorage.setItem(SAVE_KEY, JSON.stringify({
           tree: tree.value,
           classes: classes.value,
+          globalProps: globalProps.value,
+          typeDefaults: typeDefaults.value,
+          globalFonts: globalFonts.value,
+          extraStyle: extraStyle.value,
           ts: Date.now()
         }));
         console.log('[MailArchitect] Progress auto-saved');
@@ -1362,6 +1362,12 @@ const app = createApp({
           const saved = JSON.parse(raw);
           if (saved.tree && saved.tree.length) {
             hasSavedEmail.value = true;
+            tree.value = saved.tree;
+            classes.value = saved.classes || [];
+            globalProps.value = saved.globalProps || {};
+            typeDefaults.value = saved.typeDefaults || {};
+            globalFonts.value = saved.globalFonts || [];
+            extraStyle.value = saved.extraStyle || '';
             savedStateCache = saved;
           }
         }
@@ -1391,6 +1397,7 @@ const app = createApp({
       nodeHasContent, stdAttrs, iconFor, propSuggestions,
       isColorProp, colorToHex,
       mjmlSource, cleanMjmlSource, setDevice, setTheme, copyCode,
+      globalProps, typeDefaults, globalFonts, extraStyle,
       exportOpen, exportTab, exportHtml, openExport, copyHtml, downloadHtml,
       manualMjml, applyManualMjml,
       toastShow, toastSuccess, toastMsg,
@@ -1411,13 +1418,11 @@ const app = createApp({
         getPropNumeric, setPropNumeric, getPropValue, setPropValue,
         getPropParts, setPropParts,
         getActiveTheme, setActiveTheme,
-        toggleSides, isSidesEnabled, getSidesValue, getSidesNumeric, setSidesNumeric, setSidesValue,
         isCategoryOpen, toggleCategory, colorToHex, scheduleRender,
         getCustomProps, addCustomProp, deleteProp
       },
       getPropValue, setPropValue, getPropNumeric, setPropNumeric,
       getActiveTheme, setActiveTheme,
-      toggleSides, isSidesEnabled, getSidesValue, getSidesNumeric, setSidesNumeric,
       PROP_DEFS, PROP_CATEGORIES
     };
   }

@@ -23,7 +23,7 @@ const TreeNodeComp = {
         <span class="tree-node-type">{{node.type.replace('mj-','')}}</span>
 
         <div class="node-classes">
-          <span class="node-class-tag" v-for="c in (node.classes||[]).slice(0,2)" :key="c" :title="c">.{{c}}</span>
+          <span class="class-badge-mini" v-for="c in (node.classes||[]).slice(0,3)" :key="'g-'+c" :title="c">.{{c}}</span>
         </div>
         <button v-if="node.children!==undefined" class="tree-node-add" @click.stop="$emit('add', {id:node.id, type:node.type})">
           <i class="fa-solid fa-plus"></i>
@@ -130,26 +130,10 @@ const VisualEditorComp = {
                   </select>
 
                   <!-- Numeric / Sides -->
-                  <div v-else-if="defs[pkey].type==='slider' || defs[pkey].type==='sides'" class="unit-input-group w-100">
-                     <template v-if="defs[pkey].type==='sides'">
-                        <div class="sides-input-grid">
-                          <div v-for="s in (pkey === 'border-radius' ? ['top-left', 'top-right', 'bottom-right', 'bottom-left'] : ['top','right','bottom','left'])" :key="s" class="side-input-box">
-                            <span class="side-mini-label">
-                              {{ pkey === 'border-radius' 
-                                 ? s.split('-').map(x => x[0].toUpperCase()).join('') 
-                                 : s[0].toUpperCase() }}
-                            </span>
-                            <input type="text" class="prop-input-mini w-100" 
-                                   :value="helpers.getSidesValue(cls, pkey, s, isDark)"
-                                   @input="helpers.setSidesValue(cls, pkey, s, $event.target.value, isDark)">
-                          </div>
-                        </div>
-                     </template>
-                     <template v-else>
-                        <input type="text" class="prop-input-mini w-100" 
-                               :value="helpers.getPropValue(cls, pkey, isDark)"
-                               @input="helpers.setPropValue(cls, pkey, $event.target.value, isDark)">
-                     </template>
+                  <div v-else-if="defs[pkey].type==='slider'" class="unit-input-group w-100">
+                      <input type="text" class="prop-input-mini w-100" 
+                             :value="helpers.getPropValue(cls, pkey, isDark)"
+                             @input="helpers.setPropValue(cls, pkey, $event.target.value, isDark)">
                   </div>
 
                   <input v-else class="prop-input-mini w-100" :value="helpers.getPropValue(cls, pkey, isDark)" @input="helpers.setPropValue(cls, pkey, $event.target.value, isDark)">
