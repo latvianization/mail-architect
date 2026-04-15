@@ -149,22 +149,26 @@
 
     <div class="resize-handle" v-show="viewMode==='builder'" @pointerdown="startResize($event,'right')" title="Resize Inspector"></div>
 
-    <!-- Inspector Sidebar (Right) -->
     <aside class="sidebar-right" v-show="viewMode==='builder'" :style="{width: rightW+'px'}">
-      <div class="sidebar-title">
-        <span>{{selectedNode ? 'Selection' : 'Global Classes'}}</span>
+      <div class="sidebar-tabs">
+        <button class="sidebar-tab" :class="{active: tab === 'node'}" @click="tab = 'node'" title="Selection">
+          <i class="fa-solid fa-mouse-pointer"></i> <span>Selection</span>
+        </button>
+        <button class="sidebar-tab" :class="{active: tab === 'classes'}" @click="tab = 'classes'" title="Global Classes">
+          <i class="fa-solid fa-swatchbook"></i> <span>Classes</span>
+        </button>
       </div>
 
       <div class="inspector-body">
         
         <!-- Selection View -->
-        <template v-if="selectedNode">
+        <template v-if="tab === 'node' && selectedNode">
           <div class="node-header">
             <div class="node-header-info">
               <div class="node-header-icon"><i :class="iconFor(selectedNode.type)"></i></div>
               <div class="node-header-badge">{{selectedNode.type.replace('mj-','')}}</div>
             </div>
-            <div class="node-header-id">#{{selectedNode.id}}</div>
+            <div class="node-header-id">#{{selectedId}}</div>
           </div>
 
           <!-- Content Editor -->
@@ -215,64 +219,43 @@
 
           <!-- Classes Section -->
           <div class="inspector-section">
-            <div class="inspector-section-label">Styles</div>
+            <div class="inspector-section-label">Applied Classes</div>
             <div class="class-badges">
               <span class="class-badge" v-for="c in selectedNode.classes" :key="c">
-                <span class="badge-text" @click="goToClassDef(c)">.{{c}}</span>
+                <span class="badge-text" style="cursor:default">.{{c}}</span>
                 <button class="class-badge-rm" @click.stop="removeClass(c)"><i class="fa-solid fa-xmark"></i></button>
               </span>
             </div>
 
             <div class="d-flex gap-1 mt-1">
               <select class="field-select" style="flex:1" @change="pendingClass=$event.target.value; addClass(); $event.target.value=''">
-                <option value="">+ Add Class…</option>
+                <option value="">+ Apply existing…</option>
                 <option v-for="c in availableClasses" :key="c.name" :value="c.name">{{c.name}}</option>
               </select>
             </div>
-            <!-- Inline create class -->
             <div class="inline-create-form mt-2">
-               <input class="field-input" v-model="newClassName" placeholder="New class name..." @keyup.enter="createAndApplyClass">
+               <input class="field-input" v-model="newClassName" placeholder="New class..." @keyup.enter="createAndApplyClass">
                <button class="btn-outline-sm" @click="createAndApplyClass">Create & Apply</button>
             </div>
 
+            <div class="inspector-section-label mt-4">Class Configurations</div>
             <!-- Property Editors for selection -->
             <div v-for="cname in selectedNode.classes" :key="'ed-'+cname" class="cls-card-modern open mt-2">
-              <div class="cls-card-header" @click="goToClassDef(cname)">
+              <div class="cls-card-header" style="cursor:default">
                 <span class="cls-card-title">.{{cname}}</span>
-                <i class="fa-solid fa-sliders" style="opacity:0.4"></i>
+                <button class="prop-del" @click="deleteClass(cname)" title="Delete Class Globally"><i class="fa-solid fa-trash-can"></i></button>
               </div>
               <div class="p-2 bg-white" v-if="getClassObj(cname)">
                 <!-- Visual Property Editor (Light) -->
                 <visual-editor :cls="getClassObj(cname)" :is-dark="false" :defs="PROP_DEFS" :categories="PROP_CATEGORIES" :helpers="editorHelpers">
                   <template #footer>
-                    <label class="dark-toggle mt-2">
-                      <input type="checkbox" v-model="getClassObj(cname).dark"> <span class="ms-1">Dark Mode Override</span>
-                    </label>
-                    <div class="dark-section" v-if="getClassObj(cname).dark">
+                    <div class="dark-section mt-3">
+                      <div class="inspector-section-label sm" style="color:rgba(255,255,255,0.4);border:none">Dark Mode Overrides</div>
                       <!-- Visual Property Editor (Dark) -->
                       <visual-editor :cls="getClassObj(cname)" :is-dark="true" :defs="PROP_DEFS" :categories="PROP_CATEGORIES" :helpers="editorHelpers"></visual-editor>
-
-                      <div class="inspector-section-label sm mt-3">Custom Dark Overrides</div>
-                      <div class="prop-row" v-for="(v,k) in (getClassObj(cname).darkProps || {})" :key="'dark-'+k" v-if="!PROP_DEFS[k]">
-                        <span class="prop-key">{{k}}</span>
-                        <input class="prop-val" v-model="getClassObj(cname).darkProps[k]" @input="scheduleRender()">
-                        <button class="prop-del" @click="deleteDarkProp(getClassObj(cname),k)"><i class="fa-solid fa-xmark"></i></button>
-                      </div>
-                      <select class="field-select py-1 mt-1" @change="addDarkPropImmediate(getClassObj(cname), $event.target.value); $event.target.value=''">
-                        <option value="">+ Add Custom Dark Override…</option>
-                        <option v-for="p in propSuggestions" :key="'dp-'+p" :value="p" v-if="!PROP_DEFS[p]">{{p}}</option>
-                      </select>
                     </div>
                   </template>
                 </visual-editor>
-
-                <div class="mt-2 pt-1 border-top">
-                    <select class="field-select py-1" @change="addPropImmediate(getClassObj(cname), $event.target.value); $event.target.value=''">
-                      <option value="">+ Add Property Style…</option>
-                      <option v-for="p in propSuggestions" :key="p" :value="p">{{p}}</option>
-                    </select>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -282,41 +265,14 @@
             <div class="inspector-section-label">Inline CSS</div>
             <div class="cls-card-modern open">
               <div class="p-2 bg-white">
-                <!-- Visual Property Editor for Inline Styles -->
                 <visual-editor :cls="selectedNode" :is-dark="false" :defs="PROP_DEFS" :categories="PROP_CATEGORIES" :helpers="editorHelpers"></visual-editor>
-
-                <!-- Advanced Inline Styles Section -->
-                <div class="advanced-styles-toggle" @click="showAdvancedInline=!showAdvancedInline">
-                  <i class="fa-solid" :class="showAdvancedInline?'fa-chevron-up':'fa-chevron-down'"></i>
-                  Advanced Properties (Raw)
-                </div>
-
-                <div v-if="showAdvancedInline" class="mt-2 p-2 border-top bg-light rounded shadow-sm">
-                  <div v-for="(v,k) in selectedNode.style" :key="k" class="prop-row">
-                    <span class="prop-key">{{k}}</span>
-                    <label class="color-swatch-wrap" v-if="isColorProp(k)">
-                      <span class="color-swatch" :style="{background:v}"></span>
-                      <input type="color" :value="colorToHex(v)" @input="selectedNode.style[k]=$event.target.value; scheduleRender()">
-                    </label>
-                    <input class="prop-val" v-model="selectedNode.style[k]" @input="scheduleRender()">
-                    <button class="prop-del" @click="deleteInlineProp(selectedNode,k)"><i class="fa-solid fa-xmark"></i></button>
-                  </div>
-
-                  <div class="mt-2 pt-1 border-top">
-                    <select class="field-select py-1" @change="addInlineProp(selectedNode, $event.target.value); $event.target.value=''">
-                      <option value="">+ Add Inline Property…</option>
-                      <option v-for="p in propSuggestions" :key="'inline-'+p" :value="p">{{p}}</option>
-                    </select>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
 
-
           <!-- Attributes -->
           <div class="inspector-section" v-if="stdAttrs(selectedNode.type).length">
-            <div class="inspector-section-label">Attributes</div>
+            <div class="inspector-section-label">Additional Attributes</div>
             <div class="field-group mb-2" v-for="attr in stdAttrs(selectedNode.type)" :key="attr.key">
               <div class="field-label">{{attr.key}}</div>
               <input class="field-input py-1" v-model="selectedNode.attrs[attr.key]" :placeholder="attr.placeholder">
@@ -324,9 +280,18 @@
           </div>
         </template>
 
+        <div v-else-if="tab === 'node'" class="empty-selection">
+          <i class="fa-solid fa-mouse-pointer mb-3"></i>
+          <p>Select a component to edit its properties</p>
+        </div>
+
         <!-- Global Classes View -->
-        <template v-else>
-          <!-- Global Create Form -->
+        <template v-if="tab === 'classes'">
+          <div class="sidebar-info-banner">
+            <i class="fa-solid fa-circle-info"></i>
+            Changes here affect all components using these classes.
+          </div>
+          
           <div class="inline-create-form mb-3">
              <input class="field-input" v-model="newClassName" placeholder="New class (e.g. title-large)" @keyup.enter="createClass">
              <button class="btn-outline-sm" @click="createClass">Create Class</button>
@@ -335,54 +300,35 @@
           <div v-for="(cls,ci) in classes" :key="cls.name" class="cls-card-modern" :class="{open:cls._open}">
             <div class="cls-card-header" @click="toggleClass(ci)">
               <span class="cls-card-title">.{{cls.name}}</span>
-              <i class="fa-solid" :class="cls._open?'fa-chevron-up':'fa-chevron-down'" style="opacity:0.3"></i>
+              <div class="d-flex align-items-center gap-2">
+                <button class="prop-del" @click.stop="deleteClass(cls.name)"><i class="fa-solid fa-trash-can"></i></button>
+                <i class="fa-solid" :class="cls._open?'fa-chevron-up':'fa-chevron-down'" style="opacity:0.3"></i>
+              </div>
             </div>
             <div class="p-2 bg-white" v-show="cls._open">
-              <!-- Visual Property Editor (Light) -->
               <visual-editor :cls="cls" :is-dark="false" :defs="PROP_DEFS" :categories="PROP_CATEGORIES" :helpers="editorHelpers">
                 <template #footer>
-                  <!-- Unified Dark Mode in Global View -->
-                  <label class="dark-toggle mt-2">
-                    <input type="checkbox" v-model="cls.dark"> <span class="ms-1">Dark Mode Override</span>
-                  </label>
-                  <div class="dark-section" v-if="cls.dark">
-                    <!-- Visual Property Editor (Dark) -->
+                  <div class="dark-section mt-3">
+                    <div class="inspector-section-label sm" style="color:rgba(255,255,255,0.4);border:none">Dark Mode Overrides</div>
                     <visual-editor :cls="cls" :is-dark="true" :defs="PROP_DEFS" :categories="PROP_CATEGORIES" :helpers="editorHelpers"></visual-editor>
-
-                    <div class="inspector-section-label sm mt-3">Custom Dark Overrides</div>
-                    <div class="prop-row" v-for="(v,k) in (cls.darkProps || {})" :key="'gdark-'+k" v-if="!PROP_DEFS[k]">
-                      <span class="prop-key">{{k}}</span>
-                      <input class="prop-val" v-model="cls.darkProps[k]" @input="scheduleRender()">
-                      <button class="prop-del" @click="deleteDarkProp(cls,k)"><i class="fa-solid fa-xmark"></i></button>
-                    </div>
-                    <select class="field-select py-1 mt-1" @change="addDarkPropImmediate(cls, $event.target.value); $event.target.value=''">
-                      <option value="">+ Add Custom Dark Override…</option>
-                      <option v-for="p in propSuggestions" :key="'gdp-'+p" :value="p" v-if="!PROP_DEFS[p]">{{p}}</option>
-                    </select>
                   </div>
                 </template>
               </visual-editor>
-
-              <div class="inspector-section-label sm mt-3">Custom Styles</div>
-              <div v-for="(v,k) in cls.props" :key="k" class="prop-row" v-if="!PROP_DEFS[k]">
-              
-              <div class="d-flex gap-1 mt-2 pt-1 border-top">
-                 <select class="field-select py-1" style="flex:1" @change="addPropImmediate(cls, $event.target.value); $event.target.value=''">
-                   <option value="">+ Add Style…</option>
-                   <option v-for="p in propSuggestions" :key="'gp-'+p" :value="p">{{p}}</option>
-                 </select>
-                 <button class="btn-outline-sm" style="color:#ef4444; border:none" @click="deleteClass(ci)"><i class="fa-solid fa-trash"></i></button>
-              </div>
             </div>
           </div>
           
           <div v-if="!classes.length" style="text-align:center; padding:32px; color:#cbd5e1">
             <i class="fa-solid fa-swatchbook d-block mb-2" style="font-size:24px; opacity:0.3"></i>
-            No classes defined.
+            No classes defined yet.
           </div>
+        </template>
         </template>
       </div>
     </aside>
+
+    <datalist id="prop-hints">
+      <option v-for="p in propSuggestions" :key="'hint-'+p" :value="p"></option>
+    </datalist>
   </div>
 
   <!-- Modals and Toast as before -->

@@ -100,13 +100,13 @@ const VisualEditorComp = {
   props: ['cls', 'isDark', 'defs', 'categories', 'helpers'],
   template: `
     <div class="visual-editor">
-      <div v-for="cat in categories" :key="cat.name" class="prop-category" :class="{open: helpers.isCategoryOpen(cat.name)}">
-        <div class="prop-category-header" @click="helpers.toggleCategory(cat.name)">
+      <div v-for="cat in categories" :key="cat.name" class="prop-category" :class="{open: helpers.isCategoryOpen(cls, cat.name, isDark)}">
+        <div class="prop-category-header" @click="helpers.toggleCategory(cls, cat.name, isDark)">
           <i class="fa-solid prop-category-icon" :class="cat.icon"></i>
           <span class="prop-category-title">{{cat.name}}</span>
           <i class="fa-solid fa-chevron-down prop-category-arrow"></i>
         </div>
-        <div class="prop-category-body" v-if="helpers.isCategoryOpen(cat.name)">
+        <div class="prop-category-body" v-if="helpers.isCategoryOpen(cls, cat.name, isDark)">
           <div v-for="pkey in cat.props" :key="pkey" class="prop-control">
             <template v-if="defs[pkey]">
               <div class="prop-control-header">
@@ -167,7 +167,29 @@ const VisualEditorComp = {
           </div>
         </div>
       </div>
+
+      <!-- Advanced / Custom Properties Section -->
+      <div class="prop-category" :class="{open: helpers.isCategoryOpen(cls, 'Advanced', isDark)}">
+        <div class="prop-category-header" @click="helpers.toggleCategory(cls, 'Advanced', isDark)">
+          <i class="fa-solid prop-category-icon fa-gears"></i>
+          <span class="prop-category-title">Other Properties</span>
+          <i class="fa-solid fa-chevron-down prop-category-arrow"></i>
+        </div>
+        <div class="prop-category-body" v-if="helpers.isCategoryOpen(cls, 'Advanced', isDark)">
+          <div v-for="(v,k) in helpers.getCustomProps(cls, isDark)" :key="k" class="prop-row">
+            <span class="prop-key" :title="k">{{k}}</span>
+            <input class="prop-val" :value="v" @input="helpers.setPropValue(cls, k, $event.target.value, isDark)">
+            <button class="prop-del" @click="helpers.deleteProp(cls, k, isDark)"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <div class="mt-2 pt-2 border-top">
+            <input class="field-input py-1" list="prop-hints" placeholder="+ Add property (e.g. max-width)" 
+                   @keyup.enter="helpers.addCustomProp(cls, $event.target.value, isDark); $event.target.value=''">
+          </div>
+        </div>
+      </div>
+
       <slot name="footer"></slot>
     </div>
+
   `
 };

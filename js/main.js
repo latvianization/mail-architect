@@ -334,7 +334,25 @@ const app = createApp({
         }
       }
     }
-    function deleteClass(i){ classes.value.splice(i,1); }
+    function deleteClass(name) {
+      if (!confirm(`Are you sure you want to delete class ".${name}"? This will remove it from all components.`)) return;
+      
+      const idx = classes.value.findIndex(c => c.name === name);
+      if (idx > -1) {
+        classes.value.splice(idx, 1);
+        
+        // Recursive removal from tree
+        const removeRef = (nodes) => {
+          for (const n of nodes) {
+            if (n.classes) n.classes = n.classes.filter(c => c !== name);
+            if (n.children) removeRef(n.children);
+          }
+        };
+        removeRef(tree.value);
+        toast(`Deleted class .${name} globally`);
+        scheduleRender();
+      }
+    }
     function toggleClass(ci) {
       const target = classes.value[ci];
       const wasOpen = target._open;
@@ -388,15 +406,54 @@ const app = createApp({
 
     // ── Visual Editor Helpers ─────────────────────────────────────
 
-    const openCategories = ref(['Typography', 'Spacing']);
+    const openCatsMap = reactive({});
 
-    function toggleCategory(name) {
-      const i = openCategories.value.indexOf(name);
-      if (i > -1) openCategories.value.splice(i, 1);
-      else openCategories.value.push(name);
+    function getOpenKey(obj, name, isDark) {
+      const id = obj.id || obj.name || 'global';
+      const type = obj.id ? 'node' : 'class';
+      return `${type}:${id}:${isDark ? 'dark' : 'light'}:${name}`;
     }
 
-    function isCategoryOpen(name) { return openCategories.value.includes(name); }
+    function toggleCategory(obj, name, isDark) {
+      const key = getOpenKey(obj, name, isDark);
+      openCatsMap[key] = !openCatsMap[key];
+    }
+
+    function isCategoryOpen(obj, name, isDark) { 
+      return !!openCatsMap[getOpenKey(obj, name, isDark)];
+    }
+
+    function getCustomProps(obj, isDark = false) {
+      if (!obj) return {};
+      const source = isDark ? (obj.darkProps || {}) : (obj.props || obj.style || obj);
+      const custom = {};
+      for (const [k, v] of Object.entries(source)) {
+        if (!PROP_DEFS[k] && !['id','type','classes','attrs','style','content','children','name','props','dark','darkProps','_open','_pk','_pv','_dpk','_dpv','_sides','_showCustom','_showCustomDark'].includes(k)) {
+          custom[k] = v;
+        }
+      }
+      return custom;
+    }
+
+    function addCustomProp(obj, key, isDark = false) {
+      if (!key) return;
+      if (isDark) {
+        if (!obj.darkProps) obj.darkProps = {};
+        obj.darkProps[key] = '';
+      } else {
+        const target = obj.props || obj.style || obj;
+        target[key] = '';
+      }
+      scheduleRender();
+    }
+
+    function deleteProp(obj, key, isDark = false) {
+      if (isDark && obj.darkProps) delete obj.darkProps[key];
+      else if (obj.props) delete obj.props[key];
+      else if (obj.style) delete obj.style[key];
+      else delete obj[key];
+      scheduleRender();
+    }
 
     function getPropValue(obj, key, isDark = false) {
       if (!obj) return '';
@@ -1156,6 +1213,7 @@ const app = createApp({
       e.preventDefault();
       const handle = e.currentTarget;
       handle.classList.add('dragging');
+      document.body.classList.add('resizing-active');
       document.body.style.cursor = 'col-resize';
       document.body.style.userSelect = 'none';
       const startX = e.clientX;
@@ -1178,6 +1236,7 @@ const app = createApp({
       }
       function onUp(){
         handle.classList.remove('dragging');
+        document.body.classList.remove('resizing-active');
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
         window.removeEventListener('pointermove', onMove);
@@ -1232,7 +1291,7 @@ const app = createApp({
       prevSel,openLinkFromPreview,
       showRawHtml,rteEl,linkInput,linkPop,execFmt,isFmt,startLink,applyLink,removeLink,removeLinkFromPopup,onRteInput,onRteClick,insertRteBr,
       leftW,treeW,rightW,startResize,
-      showAdvanced, showAdvancedInline, openCategories, toggleCategory, isCategoryOpen,
+      showAdvanced, showAdvancedInline, openCatsMap, toggleCategory, isCategoryOpen,
 
       addBlockPop, openAddBlock, closeAddBlock, addBlockFromPopup, addTemplateFromPopup, duplicateNode,
       popupAllowedTypes, popupHoveredDetail, hoveredPreviewHtml,
@@ -1240,10 +1299,10 @@ const app = createApp({
 
 
       editorHelpers: {
-
         getPropNumeric, setPropNumeric, getPropValue, setPropValue,
         toggleSides, isSidesEnabled, getSidesValue, getSidesNumeric, setSidesNumeric,
-        isCategoryOpen, toggleCategory, colorToHex, scheduleRender
+        isCategoryOpen, toggleCategory, colorToHex, scheduleRender,
+        getCustomProps, addCustomProp, deleteProp
       },
       getPropValue, setPropValue,
       getPropNumeric, setPropNumeric, toggleSides, isSidesEnabled, getSidesValue, getSidesNumeric, setSidesNumeric,
