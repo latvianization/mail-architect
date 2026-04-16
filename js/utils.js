@@ -91,8 +91,14 @@ function colorToHex(val) {
 // ── MJML compilation helpers ────────────────────────────────
 function buildAttrs(node, globalProps = {}, typeDefaults = {}) {
   let s = '';
-  if (node.classes && node.classes.length) s += ` css-class="${[`mja-${node.id}`, ...node.classes].join(' ')}"`;
-  else s += ` css-class="mja-${node.id}"`;
+  
+  // Tags that do NOT support css-class or custom inline style
+  const noRawStyleTags = new Set(['mjml', 'mj-head', 'mj-body', 'mj-attributes', 'mj-all', 'mj-class', 'mj-font', 'mj-style', 'mj-title', 'mj-preview', 'mj-breakpoint']);
+
+  if (!noRawStyleTags.has(node.type)) {
+    if (node.classes && node.classes.length) s += ` css-class="${[`mja-${node.id}`, ...node.classes].join(' ')}"`;
+    else s += ` css-class="mja-${node.id}"`;
+  }
 
   const tagDefaults = typeDefaults[node.type] || {};
 
@@ -105,10 +111,8 @@ function buildAttrs(node, globalProps = {}, typeDefaults = {}) {
   // Handle Inline Styles
   if (node.style && Object.keys(node.style).length > 0) {
     const inlineStyles = [];
-    const mjAttributes = ['mj-text', 'mj-button', 'mj-column', 'mj-section', 'mj-hero', 'mj-wrapper', 'mj-image', 'mj-divider', 'mj-spacer', 'mj-social', 'mj-social-element', 'mj-navbar', 'mj-navbar-link', 'mj-accordion', 'mj-accordion-element', 'mj-accordion-title', 'mj-accordion-text', 'mj-table'];
-
     // Properties that MJML supports as direct attributes on almost all tags
-    const stdMjmlAttrs = new Set(['align', 'background-color', 'background-url', 'background-repeat', 'background-size', 'background-position', 'border', 'border-bottom', 'border-left', 'border-right', 'border-top', 'border-radius', 'color', 'container-background-color', 'direction', 'font-family', 'font-size', 'font-style', 'font-weight', 'height', 'letter-spacing', 'line-height', 'padding', 'padding-bottom', 'padding-left', 'padding-right', 'padding-top', 'text-align', 'text-decoration', 'vertical-align', 'width', 'src', 'href', 'target', 'alt', 'mode', 'full-width', 'fluid-on-mobile', 'inner-padding', 'inner-background-color', 'text-transform', 'border-width', 'border-style', 'border-color']);
+    const stdMjmlAttrs = new Set(['align', 'background-color', 'background-url', 'background-repeat', 'background-size', 'background-position', 'border', 'border-bottom', 'border-left', 'border-right', 'border-top', 'border-radius', 'color', 'container-background-color', 'direction', 'font-family', 'font-size', 'font-style', 'font-weight', 'height', 'letter-spacing', 'line-height', 'padding', 'padding-bottom', 'padding-left', 'padding-right', 'padding-top', 'text-align', 'text-decoration', 'vertical-align', 'width', 'src', 'href', 'target', 'alt', 'mode', 'full-width', 'fluid-on-mobile', 'inner-padding', 'inner-background-color', 'text-transform', 'border-width', 'border-style', 'border-color', 'rel', 'path']);
 
 
     for (const [k, v] of Object.entries(node.style)) {
@@ -118,11 +122,11 @@ function buildAttrs(node, globalProps = {}, typeDefaults = {}) {
         if (globalProps && globalProps[k] === v) continue;
         if (tagDefaults[k] === v) continue;
         s += ` ${k}="${String(v).replace(/"/g, '&quot;')}"`;
-      } else {
+      } else if (!noRawStyleTags.has(node.type)) {
         inlineStyles.push(`${k}:${v}`);
       }
     }
-    if (inlineStyles.length > 0) {
+    if (inlineStyles.length > 0 && !noRawStyleTags.has(node.type)) {
       s += ` style="${inlineStyles.join(';')}"`;
     }
   }
@@ -260,7 +264,7 @@ function parseMjmlToTree(src) {
     }
   });
 
-  const stdMjmlAttrs = new Set(['align', 'background-color', 'background-url', 'background-repeat', 'background-size', 'background-position', 'border', 'border-bottom', 'border-left', 'border-right', 'border-top', 'border-radius', 'color', 'container-background-color', 'direction', 'font-family', 'font-size', 'font-style', 'font-weight', 'height', 'letter-spacing', 'line-height', 'padding', 'padding-bottom', 'padding-left', 'padding-right', 'padding-top', 'text-align', 'text-decoration', 'vertical-align', 'width', 'src', 'href', 'target', 'alt', 'mode', 'full-width', 'fluid-on-mobile', 'inner-padding', 'inner-background-color', 'text-transform', 'border-width', 'border-style', 'border-color']);
+  const stdMjmlAttrs = new Set(['align', 'background-color', 'background-url', 'background-repeat', 'background-size', 'background-position', 'border', 'border-bottom', 'border-left', 'border-right', 'border-top', 'border-radius', 'color', 'container-background-color', 'direction', 'font-family', 'font-size', 'font-style', 'font-weight', 'height', 'letter-spacing', 'line-height', 'padding', 'padding-bottom', 'padding-left', 'padding-right', 'padding-top', 'text-align', 'text-decoration', 'vertical-align', 'width', 'src', 'href', 'target', 'alt', 'mode', 'full-width', 'fluid-on-mobile', 'inner-padding', 'inner-background-color', 'text-transform', 'border-width', 'border-style', 'border-color', 'rel', 'path']);
 
   function parseEl(el) {
     const type = el.tagName.toLowerCase();
@@ -321,22 +325,44 @@ function parseMjmlToTree(src) {
     return { id, type, classes: cls, attrs, style, content, children };
   }
 
+  const mjmlEl = doc.querySelector('mjml');
   const bodyEl = doc.querySelector('mj-body');
-  if (!bodyEl) return { tree: [], newClasses, globalProps: globalDefaults, typeDefaults, globalFonts, extraStyle };
+  
+  if (!mjmlEl && !bodyEl) return { tree: [], newClasses, globalProps: globalDefaults, typeDefaults, globalFonts, extraStyle };
 
-  const bodyNode = parseEl(bodyEl);
+  let rootNode;
+  if (mjmlEl) {
+    rootNode = parseEl(mjmlEl);
+    // Ensure mjml node has mj-head and mj-body if missing
+    if (!rootNode.children.some(c => c.type === 'mj-head')) {
+      rootNode.children.unshift({ id: uid(), type: 'mj-head', classes: [], attrs: {}, style: {}, content: '', children: [] });
+    }
+    if (!rootNode.children.some(c => c.type === 'mj-body')) {
+      rootNode.children.push({ id: uid(), type: 'mj-body', classes: [], attrs: {}, style: {}, content: '', children: [] });
+    }
+  } else {
+    // Wrap stand-alone body in mjml/mj-head/mj-body structure
+    rootNode = {
+      id: uid(), type: 'mjml', classes: [], attrs: {}, style: {}, content: '',
+      children: [
+        { id: uid(), type: 'mj-head', classes: [], attrs: {}, style: {}, content: '', children: [] },
+        parseEl(bodyEl)
+      ]
+    };
+  }
+
   // Scan for missing classes in the tree
   const usedClasses = new Set();
   function harvest(node) {
     if (node.classes) node.classes.forEach(c => usedClasses.add(c));
     if (node.children) node.children.forEach(harvest);
   }
-  harvest(bodyNode);
+  harvest(rootNode);
   usedClasses.forEach(c => {
     if (!newClasses.some(nc => nc.name === c)) {
       newClasses.push({ name: c, props: {}, _open: false, _pk: '', _pv: '', dark: false, darkProps: {} });
     }
   });
 
-  return { tree: [bodyNode], newClasses, globalProps: globalDefaults, typeDefaults, globalFonts, extraStyle };
+  return { tree: [rootNode], newClasses, globalProps: globalDefaults, typeDefaults, globalFonts, extraStyle };
 }

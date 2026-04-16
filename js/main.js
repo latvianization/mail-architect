@@ -63,6 +63,8 @@ const app = createApp({
 
     function getPreviewMjml(node) {
       if (!node) return '';
+      if (node.type === 'mjml') return compileNode(node, 0, globalProps.value, typeDefaults.value);
+      
       let body = compileNode(node, 0);
 
       // If the node is a content-level component, wrap it in section and column so MJML renders it correctly
@@ -71,6 +73,8 @@ const app = createApp({
         body = `<mj-section><mj-column>${body}</mj-column></mj-section>`;
       } else if (node.type === 'mj-column') {
         body = `<mj-section>${body}</mj-section>`;
+      } else if (node.type === 'mj-head') {
+        return `<mjml>${body}<mj-body></mj-body></mjml>`;
       }
 
       return `<mjml><mj-body>${body}</mj-body></mjml>`;
@@ -193,8 +197,11 @@ const app = createApp({
 
     // Document tree
     const tree = ref([{
-      id: 'root', type: 'mj-body', classes: [], attrs: {}, content: '',
-      children: []
+      id: 'root', type: 'mjml', classes: [], attrs: {}, content: '',
+      children: [
+        { id: uid(), type: 'mj-head', classes: [], attrs: {}, style: {}, content: '', children: [] },
+        { id: uid(), type: 'mj-body', classes: [], attrs: {}, style: {}, content: '', children: [] }
+      ]
     }]);
 
     const hasContent = computed(() => {
@@ -208,9 +215,13 @@ const app = createApp({
 
     function selectNode(id) { selectedId.value = id; tab.value = 'node'; }
     function deleteNode(n) {
-      if (n.type === 'mj-body') {
-        n.children = [];
-        toast('Cleared all components');
+      if (['mjml', 'mj-head', 'mj-body'].includes(n.type)) {
+        if (n.type === 'mj-body') {
+          n.children = [];
+          toast('Cleared all components in body');
+        } else {
+          toast(`Cannot delete ${n.type} element`, false);
+        }
         return;
       }
       if (selectedId.value === n.id) selectedId.value = null;
@@ -330,7 +341,13 @@ const app = createApp({
 
     function clearDoc() {
       if (!confirm('Clear entire document?')) return;
-      tree.value = [{ id: 'root', type: 'mj-body', classes: [], attrs: {}, content: '', children: [] }];
+      tree.value = [{
+        id: 'root', type: 'mjml', classes: [], attrs: {}, content: '',
+        children: [
+          { id: uid(), type: 'mj-head', classes: [], attrs: {}, style: {}, content: '', children: [] },
+          { id: uid(), type: 'mj-body', classes: [], attrs: {}, style: {}, content: '', children: [] }
+        ]
+      }];
       selectedId.value = null;
     }
     function cloneNode(tpl) {
@@ -491,6 +508,10 @@ const app = createApp({
 
     function addCustomProp(obj, key, isDark = false) {
       if (!key) return;
+      if (!stdMjmlAttrs.has(key)) {
+        toast(`Attribute "${key}" is not natively supported by MJML.`, false);
+        return;
+      }
       if (isDark) {
         if (!obj.darkProps) obj.darkProps = {};
         obj.darkProps[key] = '';
@@ -501,7 +522,7 @@ const app = createApp({
       scheduleRender();
     }
 
-    const stdMjmlAttrs = new Set(['align', 'background-color', 'background-url', 'background-repeat', 'background-size', 'background-position', 'border', 'border-bottom', 'border-left', 'border-right', 'border-top', 'border-radius', 'color', 'container-background-color', 'direction', 'font-family', 'font-size', 'font-style', 'font-weight', 'height', 'letter-spacing', 'line-height', 'padding', 'padding-bottom', 'padding-left', 'padding-right', 'padding-top', 'text-align', 'text-decoration', 'vertical-align', 'width', 'src', 'href', 'target', 'alt', 'mode', 'full-width', 'fluid-on-mobile', 'inner-padding', 'inner-background-color', 'text-transform', 'border-width', 'border-style', 'border-color']);
+    const stdMjmlAttrs = new Set(['align', 'background-color', 'background-url', 'background-repeat', 'background-size', 'background-position', 'border', 'border-bottom', 'border-left', 'border-right', 'border-top', 'border-radius', 'color', 'container-background-color', 'direction', 'font-family', 'font-size', 'font-style', 'font-weight', 'height', 'letter-spacing', 'line-height', 'padding', 'padding-bottom', 'padding-left', 'padding-right', 'padding-top', 'text-align', 'text-decoration', 'vertical-align', 'width', 'src', 'href', 'target', 'alt', 'mode', 'full-width', 'fluid-on-mobile', 'inner-padding', 'inner-background-color', 'text-transform', 'border-width', 'border-style', 'border-color', 'rel', 'path']);
 
     function deleteProp(obj, key, isDark = false) {
       if (!obj) return;
@@ -633,6 +654,20 @@ const app = createApp({
     }
 
     const mjmlSource = computed(() => {
+      if (!tree.value || !tree.value.length) return '';
+      
+      // If the tree already starts with mjml, we can compile it directly
+      // but we still need to merge the "Global" metadata (Fonts/Classes) into the head.
+      // For now, let's keep the programmatic injection so existing Global UI works.
+      
+      const root = tree.value[0];
+      if (root.type !== 'mjml') return '';
+
+      // Find mj-head node
+      const headIdx = root.children.findIndex(c => c.type === 'mj-head');
+      const head = root.children[headIdx];
+      const bodyNode = root.children.find(c => c.type === 'mj-body');
+
       // 1. Scan tree for all used classes
       const usedClasses = new Set();
       function scanTree(nodes) {
@@ -651,16 +686,17 @@ const app = createApp({
       let attrs = '';
       for (const [tag, props] of Object.entries(typeDefaults.value)) {
         let s = `      <${tag}`;
-        for (const [k, v] of Object.entries(props)) s += ` ${k}="${v}"`;
+        for (const [k, v] of Object.entries(props)) {
+          s += ` ${k}="${String(v).replace(/"/g, '&quot;')}"`;
+        }
         attrs += s + ' />\n';
       }
       
       // Global mj-all
       if (Object.keys(globalProps.value).length > 0) {
-        let ps = Object.entries(globalProps.value).map(([k,v]) => `${k}="${v}"`).join(' ');
+        let ps = Object.entries(globalProps.value).map(([k,v]) => `${k}="${String(v).replace(/"/g, '&quot;')}"`).join(' ');
         attrs += `      <mj-all ${ps} />\n`;
       }
-      // No longer generating mj-class as per user request
 
       // 3. Generate CSS Rules in mj-style for all classes
       let linkCss = '';
@@ -671,11 +707,9 @@ const app = createApp({
           linkCss += `      .${lc} {\n`;
           for (const [k, v] of Object.entries(mp)) {
             if (v !== undefined && v !== null && v !== '') {
-              // Map MJML specific attributes to CSS where necessary
               let cssK = k;
               if (k === 'align') cssK = 'text-align';
               if (k === 'container-background-color') cssK = 'background-color';
-              
               linkCss += `        ${cssK}: ${v};\n`;
             }
           }
@@ -683,10 +717,8 @@ const app = createApp({
         }
       }
 
-      // 4. Generate Dark Mode CSS (with Preview Simulation)
+      // 4. Generate Dark Mode CSS
       let darkRulesCollected = '';
-      
-      // 4a. Collect from Global Classes
       for (const c of classes.value) {
         if (!usedClasses.has(c.name)) continue;
         if (c.darkProps && Object.keys(c.darkProps).length > 0) {
@@ -695,8 +727,6 @@ const app = createApp({
           darkRulesCollected += `      .${c.name} { ${p} }\n`;
         }
       }
-
-      // 4b. Collect from Nodes (Inline Dark Overrides)
       function scanDarkNodes(nodes) {
         for (const n of nodes) {
           if (n.darkProps && Object.keys(n.darkProps).length > 0) {
@@ -711,20 +741,18 @@ const app = createApp({
           if (n.children) scanDarkNodes(n.children);
         }
       }
-      scanDarkNodes(tree.value);
+      if (bodyNode) scanDarkNodes([bodyNode]);
 
       let darkCss = '';
       if (darkRulesCollected) {
         if (previewTheme.value === 'dark') {
-          // Simulation: Apply rules directly
-          darkCss = `\n      /* Dark Mode Simulation (Preview Only) */\n${darkRulesCollected}\n`;
+          darkCss = `\n      /* Dark Mode Simulation */\n${darkRulesCollected}\n`;
         } else {
-          // Standard: Wrap in media query
           darkCss = `\n      @media (prefers-color-scheme: dark) {\n${darkRulesCollected}      }\n`;
         }
       }
 
-      // 5. Generate Inline Overrides (mja-id)
+      // 5. Generate Inline Overrides
       let inlineStyleRules = '';
       function scanInline(nodes) {
         for (const n of nodes) {
@@ -741,7 +769,7 @@ const app = createApp({
           if (n.children) scanInline(n.children);
         }
       }
-      scanInline(tree.value);
+      if (bodyNode) scanInline([bodyNode]);
 
       // 6. Generate Fonts
       let fonts = '';
@@ -756,10 +784,37 @@ const app = createApp({
       const styleComb = (linkCss + darkCss + inlineStyleRules + '\n' + (extraStyle.value || '')).trim();
       const stylePart = styleComb ? `    <mj-style>\n      ${styleComb}\n    </mj-style>\n` : '';
 
-      let body = '';
-      for (const n of tree.value) body += compileNode(n, 1, globalProps.value, typeDefaults.value) + '\n';
+      // --- ASSEMBLY ---
+      // We manually construct mj-head content because it's merged from Global settings + Tree nodes
+      let headChildrenHtml = '';
+      let hasTreeAttributes = false;
+      if (head && head.children) {
+        for (const c of head.children) {
+          if (c.type === 'mj-attributes') hasTreeAttributes = true;
+          headChildrenHtml += compileNode(c, 2, globalProps.value, typeDefaults.value) + '\n';
+        }
+      }
 
-      return `<mjml>\n  <mj-head>\n${fonts}    <mj-attributes>\n${attrs}    </mj-attributes>\n${stylePart}  </mj-head>\n${body}</mjml>`;
+      // If we have programmatic attributes and NO mj-attributes node in the tree, we create one.
+      // If we HAVE an mj-attributes node in the tree, we should ideally merge them, but for now 
+      // let's just ensure we don't double-wrap if hasTreeAttributes is true.
+      
+      let finalAttributesBlock = '';
+      if (attrs.trim()) {
+        if (hasTreeAttributes) {
+          // This is tricky: we'd need to inject 'attrs' into the existing mj-attributes string.
+          // For simplicity and to avoid invalid MJML, if the user has a custom mj-attributes node,
+          // we'll just prepend our programmatic ones in their own block (MJML allows multiple mj-attributes).
+          finalAttributesBlock = `    <mj-attributes>\n${attrs}    </mj-attributes>\n`;
+        } else {
+          finalAttributesBlock = `    <mj-attributes>\n${attrs}    </mj-attributes>\n`;
+        }
+      }
+
+      const fullHead = `  <mj-head>\n${fonts}${finalAttributesBlock}${stylePart}${headChildrenHtml}  </mj-head>`;
+      const fullBody = bodyNode ? compileNode(bodyNode, 1, globalProps.value, typeDefaults.value) : '  <mj-body></mj-body>';
+
+      return `<mjml>\n${fullHead}\n${fullBody}\n</mjml>`;
     });
 
 
@@ -1029,7 +1084,9 @@ const app = createApp({
       if (!previewFrame.value) return;
       try {
         const fn = getMjml2Html();
-        const r = fn(mjmlSource.value, { keepComments: false, validationLevel: 'soft' });
+        // Expand self-closing tags to full tags for maximum compatibility with all MJML parser versions
+        const expandedMjml = mjmlSource.value.replace(/<(mj-[a-z0-9-]+)([^>]*?)\s*\/>/gi, '<$1$2></$1>');
+        const r = fn(expandedMjml, { keepComments: false, validationLevel: 'soft' });
         compileError.value = false;
         let html = r.html;
         
@@ -1108,6 +1165,7 @@ const app = createApp({
       } catch (e) {
         compileError.value = true;
         console.warn('MJML error:', e);
+        console.log('Failed MJML Source:', mjmlSource.value);
       }
     }
     function scheduleRender() { if (debounceTimer) clearTimeout(debounceTimer); debounceTimer = setTimeout(renderPreview, 600); }
@@ -1297,7 +1355,13 @@ const app = createApp({
     }
 
     function executeNewEmail() {
-      tree.value = [{ id: 'root', type: 'mj-body', classes: [], attrs: {}, style: {}, content: '', children: [] }];
+      tree.value = [{
+        id: 'root', type: 'mjml', classes: [], attrs: {}, content: '',
+        children: [
+          { id: uid(), type: 'mj-head', classes: [], attrs: {}, style: {}, content: '', children: [] },
+          { id: uid(), type: 'mj-body', classes: [], attrs: {}, style: {}, content: '', children: [] }
+        ]
+      }];
       classes.value = [];
       undoStack.value = [];
       redoStack.value = [];
@@ -1386,8 +1450,8 @@ const app = createApp({
       deviceWidth, deviceLabel, previewTheme, viewMode, showGuides, tab, selectedId, selectedNode,
       previewFrame, previewWrap, previewHeight, compileError, hasContent,
       componentLibrary: computed(() => {
-        const obj = tree.value.find(n => n.type === 'mj-body');
-        return obj ? compLib.filter(c => c.type !== 'mj-body') : compLib;
+        // Exclude root-level singletons from the general gallery
+        return compLib.filter(c => !['mjml', 'mj-head', 'mj-body'].includes(c.type));
       }), tree, classes,
       cloneNode, selectNode, deleteNode, clearDoc,
       pendingClass, inlineEditClass, availableClasses, getClassObj, toggleInlineEdit, addClass, removeClass,

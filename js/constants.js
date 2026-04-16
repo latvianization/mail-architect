@@ -4,14 +4,23 @@ const iconMap = {
   'mj-text':'fa-solid fa-font','mj-image':'fa-regular fa-image',
   'mj-button':'fa-solid fa-arrow-pointer','mj-divider':'fa-solid fa-grip-lines',
   'mj-spacer':'fa-solid fa-arrows-up-down','mj-social':'fa-solid fa-share-nodes',
-  'mj-social-element':'fa-brands fa-twitter','mj-wrapper':'fa-solid fa-box',
-  'mj-hero':'fa-solid fa-panorama','mj-accordion':'fa-solid fa-rectangle-list',
-  'mj-table':'fa-solid fa-table','mj-raw':'fa-solid fa-code',
-  'mj-navbar':'fa-solid fa-bars','mj-navbar-link':'fa-solid fa-link',
+  'mj-social-element':'fa-brands fa-twitter', 'mj-wrapper':'fa-solid fa-box',
+  'mj-hero':'fa-solid fa-panorama', 'mj-accordion':'fa-solid fa-rectangle-list',
+  'mj-table':'fa-solid fa-table', 'mj-raw':'fa-solid fa-code',
+  'mj-navbar':'fa-solid fa-bars', 'mj-navbar-link':'fa-solid fa-link',
+  'mjml':'fa-solid fa-file-code', 'mj-head':'fa-solid fa-gears',
+  'mj-title':'fa-solid fa-heading', 'mj-preview':'fa-solid fa-eye',
+  'mj-breakpoint':'fa-solid fa-mobile-screen', 'mj-carousel':'fa-solid fa-images',
+  'mj-carousel-image':'fa-solid fa-image', 'mj-include':'fa-solid fa-file-import',
+  'mj-style':'fa-solid fa-palette', 'mj-font':'fa-solid fa-font-awesome',
+  'mj-attributes':'fa-solid fa-list-check', 'mj-all':'fa-solid fa-asterisk',
+  'mj-class':'fa-solid fa-tag'
 };
 
 const compLib = [
-  {name:'Body',     type:'mj-body',           icon:'fa-solid fa-border-all',       desc:'Required root element. Use only once per email.'},
+  {name:'Title',    type:'mj-title',          icon:'fa-solid fa-heading',          desc:'Set the HTML title of your email.'},
+  {name:'Preview',  type:'mj-preview',        icon:'fa-solid fa-eye',              desc:'Set the preheader text visible in inboxes.'},
+  {name:'Breakpoint',type:'mj-breakpoint',    icon:'fa-solid fa-mobile-screen',    desc:'Define mobile breakpoint width.'},
   {name:'Section',  type:'mj-section',        icon:'fa-regular fa-square-full',    desc:'Row container to hold your columns.'},
   {name:'Column',   type:'mj-column',         icon:'fa-solid fa-table-columns',    desc:'Vertical column placed inside sections.'},
   {name:'Group',    type:'mj-group',          icon:'fa-solid fa-object-group',     desc:'Keeps columns side-by-side on mobile.'},
@@ -25,12 +34,15 @@ const compLib = [
   {name:'Wrapper',  type:'mj-wrapper',        icon:'fa-solid fa-box',              desc:'Wraps multiple sections together.'},
   {name:'Hero',     type:'mj-hero',           icon:'fa-solid fa-panorama',         desc:'Section with background image.'},
   {name:'Accordion',type:'mj-accordion',      icon:'fa-solid fa-rectangle-list',   desc:'Interactive collapsible panels.'},
+  {name:'Carousel', type:'mj-carousel',       icon:'fa-solid fa-images',           desc:'Interactive image gallery gallery.'},
   {name:'Table',    type:'mj-table',          icon:'fa-solid fa-table',            desc:'Raw HTML table for data layout.'},
+  {name:'Raw',      type:'mj-raw',            icon:'fa-solid fa-code',             desc:'Generic HTML container.'},
+  {name:'Include',  type:'mj-include',        icon:'fa-solid fa-file-import',      desc:'Include external MJML snippet.'},
 ];
 
 const containerTypes = new Set([
-  'mj-body','mj-section','mj-column','mj-group',
-  'mj-wrapper','mj-hero','mj-social','mj-accordion','mj-navbar'
+  'mjml','mj-head','mj-body','mj-section','mj-column','mj-group',
+  'mj-wrapper','mj-hero','mj-social','mj-accordion','mj-navbar', 'mj-carousel'
 ]);
 
 const defaultContent = {
@@ -42,11 +54,14 @@ const defaultContent = {
   'mj-table':'<tr><th>Header</th></tr><tr><td>Cell</td></tr>',
   'mj-accordion-title':'Accordion Title',
   'mj-accordion-text':'Accordion content goes here.',
+  'mj-title': 'Email Title',
+  'mj-preview': 'Preheader text content...',
 };
 
-const TEXT_TYPES = ['mj-text', 'mj-button', 'mj-raw', 'mj-social-element', 'mj-navbar-link', 'mj-table', 'mj-accordion-title', 'mj-accordion-text'];
+const TEXT_TYPES = ['mj-text', 'mj-button', 'mj-raw', 'mj-social-element', 'mj-navbar-link', 'mj-table', 'mj-accordion-title', 'mj-accordion-text', 'mj-title', 'mj-preview'];
 
 const scaffoldMap = {
+  'mjml':         ['mj-head', 'mj-body'],
   'mj-section':   ['mj-column'],
   'mj-column':    ['mj-text'],
   'mj-wrapper':   ['mj-section'],
@@ -56,6 +71,7 @@ const scaffoldMap = {
   'mj-accordion': ['mj-accordion-element'],
   'mj-accordion-element': ['mj-accordion-title', 'mj-accordion-text'],
   'mj-hero':      ['mj-text'],
+  'mj-carousel':  ['mj-carousel-image', 'mj-carousel-image'],
 };
 
 const propSuggestions = [
@@ -79,25 +95,33 @@ const propSuggestions = [
 ];
 
 const stdAttrMap = {
+  'mjml':         [],
+  'mj-head':      [],
   'mj-body':      [],
-  'mj-button':    [{key:'href',placeholder:'https://...'},{key:'target',placeholder:'_blank'}],
+  'mj-button':    [{key:'href',placeholder:'https://...'},{key:'target',placeholder:'_blank'},{key:'rel',placeholder:'nofollow'}],
   'mj-image':     [{key:'src',placeholder:'https://...'},{key:'href',placeholder:'https://...'},{key:'alt',placeholder:'description'}],
-  'mj-social-element':[{key:'name',placeholder:'twitter'},{key:'href',placeholder:'https://...'},{key:'src',placeholder:'icon url'}],
-  'mj-navbar-link':[{key:'href',placeholder:'https://...'},{key:'target',placeholder:'_blank'}],
+  'mj-social-element':[{key:'name',placeholder:'twitter'},{key:'href',placeholder:'https://...'},{key:'src',placeholder:'icon url'},{key:'rel',placeholder:'nofollow'}],
+  'mj-navbar-link':[{key:'href',placeholder:'https://...'},{key:'target',placeholder:'_blank'},{key:'rel',placeholder:'nofollow'}],
   'mj-hero':      [{key:'mode',placeholder:'fixed-height'}],
+  'mj-carousel-image':[{key:'src',placeholder:'https://...'},{key:'href',placeholder:'https://...'},{key:'alt',placeholder:'description'}],
+  'mj-breakpoint':[{key:'width',placeholder:'480px'}],
+  'mj-include':   [{key:'path',placeholder:'path/to/snippet.mjml'}],
 };
 
 const allowedChildrenMap = {
+  'mjml':         ['mj-head', 'mj-body'],
+  'mj-head':      ['mj-title', 'mj-preview', 'mj-breakpoint', 'mj-font', 'mj-style', 'mj-attributes', 'mj-raw'],
   'mj-body':      ['mj-section', 'mj-wrapper', 'mj-hero', 'mj-raw'],
   'mj-section':   ['mj-column', 'mj-group', 'mj-raw'],
   'mj-wrapper':   ['mj-section', 'mj-hero', 'mj-raw'],
-  'mj-hero':      ['mj-text', 'mj-image', 'mj-button', 'mj-divider', 'mj-spacer', 'mj-social', 'mj-navbar', 'mj-accordion', 'mj-table', 'mj-raw'],
-  'mj-column':    ['mj-text', 'mj-image', 'mj-button', 'mj-divider', 'mj-spacer', 'mj-social', 'mj-navbar', 'mj-accordion', 'mj-table', 'mj-raw'],
+  'mj-hero':      ['mj-text', 'mj-image', 'mj-button', 'mj-divider', 'mj-spacer', 'mj-social', 'mj-navbar', 'mj-accordion', 'mj-carousel', 'mj-table', 'mj-raw'],
+  'mj-column':    ['mj-text', 'mj-image', 'mj-button', 'mj-divider', 'mj-spacer', 'mj-social', 'mj-navbar', 'mj-accordion', 'mj-carousel', 'mj-table', 'mj-raw'],
   'mj-group':     ['mj-column', 'mj-raw'],
   'mj-social':    ['mj-social-element'],
   'mj-navbar':    ['mj-navbar-link'],
   'mj-accordion': ['mj-accordion-element'],
   'mj-accordion-element': ['mj-accordion-title', 'mj-accordion-text'],
+  'mj-carousel':  ['mj-carousel-image'],
 };
 const PROP_DEFS = {
   'font-size':      { type: 'slider', min: 8, max: 80, unit: 'px', icon: 'fa-text-height' },

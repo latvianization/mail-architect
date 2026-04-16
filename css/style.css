@@ -280,7 +280,11 @@ body.resizing-active iframe { pointer-events: none !important; }
 .tree-node-row.selected{background:#f5f3ff;border-color:#c7d2fe;box-shadow:inset 4px 0 0 #6366f1}
 .tree-node-children{padding-left:14px;border-left:1px dashed #e2e8f0;margin-left:14px;padding-top:1px;padding-bottom:2px;transition: all 0.2s}
 
-.tree-node-type{font-size:11px;font-weight:800;color:#334155;font-family:'JetBrains Mono',monospace;flex:1;text-transform:uppercase;letter-spacing:0.5px}
+.tree-node-type{font-size:11px;font-weight:800;color:#334155;font-family:'JetBrains Mono',monospace;flex:1;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;text-transform:uppercase;letter-spacing:0.5px}
+.tree-node-row[data-type="mjml"] { background: #f8fafc; border-bottom: 1px solid #e2e8f0; border-radius: 0; padding-top: 8px; padding-bottom: 8px; cursor: default; }
+.tree-node-row[data-type="mjml"] .tree-node-type { color: #6366f1; font-size: 10px; }
+.tree-node-row[data-type="mj-head"], .tree-node-row[data-type="mj-body"] { background: #fff; font-style: normal; }
+.tree-node-row[data-type="mj-head"] .tree-node-type, .tree-node-row[data-type="mj-body"] .tree-node-type { color: #475569; font-size: 10px; }
 
 .tree-node-icon{font-size:13px;color:#a5b4fc;width:18px;text-align:center}
 .node-classes{display:flex;gap:4px;margin-right:8px}
