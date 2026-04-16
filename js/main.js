@@ -474,7 +474,16 @@ const app = createApp({
     const inspectorThemes = reactive({}); // Stores 'light' or 'dark' for each class/node
     function getThemeKey(obj) { return obj.id || obj.name || 'global'; }
     function getActiveTheme(obj) { return inspectorThemes[getThemeKey(obj)] || 'light'; }
-    function setActiveTheme(obj, theme) { inspectorThemes[getThemeKey(obj)] = theme; }
+    function setActiveTheme(obj, theme) { 
+      inspectorThemes[getThemeKey(obj)] = theme; 
+      // Scroll to opened section
+      nextTick(() => {
+        setTimeout(() => {
+          const el = document.querySelector(`.theme-segment.active`);
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 50);
+      });
+    }
 
     function getPropParts(val) {
       if (!val) return { num: '', unit: 'px' };
@@ -1123,6 +1132,10 @@ const app = createApp({
     watch(selectedId, (id) => {
       showRawHtml.value = false;
       nextTick(() => {
+        // Scroll inspector to top on new selection
+        const ins = document.querySelector('.inspector-body');
+        if (ins) ins.scrollTop = 0;
+
         if (rteEl.value && selectedNode.value) {
           rteEl.value.innerHTML = selectedNode.value.content || '';
         }
