@@ -97,51 +97,54 @@ const TreeNodeComp = {
 // ── Visual Property Editor Component ──────────────────────────────
 const VisualEditorComp = {
   name: 'visual-editor',
-  props: ['cls', 'isDark', 'defs', 'categories', 'helpers', 'isInline'],
+  props: ['cls', 'isDark', 'defs', 'categories', 'helpers', 'isInline', 'tagType'],
   template: `
     <div class="visual-editor-compact">
 
       <!-- Property Grid -->
       <div class="prop-grid">
         <template v-for="cat in categories" :key="cat.name">
-          <template v-for="pkey in cat.props" :key="pkey">
-            <div v-if="shouldShow(pkey)" class="prop-item-compact" :class="{'prop-item-full': defs[pkey].type==='sides'}">
-              <template v-if="defs[pkey]">
-                <div class="prop-item-label" :title="pkey">
-                  <i class="fa-solid" :class="defs[pkey].icon"></i>
-                  <span>{{pkey}}</span>
-                </div>
-                
-                <div class="prop-item-controls">
-                  <!-- Color Picker -->
-                  <div v-if="defs[pkey].type==='color'" class="color-compact">
-                    <div class="color-swatch-mini" :style="{background:helpers.getPropValue(cls, pkey, isDark)||'#000'}">
-                      <input type="color" :value="helpers.colorToHex(helpers.getPropValue(cls, pkey, isDark)||'#000000')" 
-                             @input="helpers.setPropValue(cls, pkey, $event.target.value, isDark)">
-                    </div>
-                    <input class="prop-input-mini" :value="helpers.getPropValue(cls, pkey, isDark)" @input="helpers.setPropValue(cls, pkey, $event.target.value, isDark)">
+          <template v-if="isCategorySupported(cat)">
+            <div class="inspector-section-label sub">{{cat.name}}</div>
+            <template v-for="pkey in cat.props" :key="pkey">
+              <div v-if="shouldShow(pkey)" class="prop-item-compact" :class="{'prop-item-full': defs[pkey].type==='sides'}">
+                <template v-if="defs[pkey]">
+                  <div class="prop-item-label" :title="pkey">
+                    <i class="fa-solid" :class="defs[pkey].icon"></i>
+                    <span>{{pkey}}</span>
                   </div>
-
-                  <!-- Select -->
-                  <select v-else-if="defs[pkey].type==='select'" class="prop-select-mini w-100" 
-                          :value="helpers.getPropValue(cls, pkey, isDark)"
-                          @change="helpers.setPropValue(cls, pkey, $event.target.value, isDark)">
-                    <option v-for="opt in defs[pkey].options" :key="opt" :value="opt">{{opt}}</option>
-                  </select>
-
-                  <!-- Numeric / Sides -->
-                  <div v-else-if="defs[pkey].type==='slider'" class="unit-input-group w-100">
-                      <input type="text" class="prop-input-mini w-100" 
-                             :value="helpers.getPropValue(cls, pkey, isDark)"
-                             @input="helpers.setPropValue(cls, pkey, $event.target.value, isDark)">
-                  </div>
-
-                  <input v-else class="prop-input-mini w-100" :value="helpers.getPropValue(cls, pkey, isDark)" @input="helpers.setPropValue(cls, pkey, $event.target.value, isDark)">
                   
-                  <button v-if="helpers.hasPropValue(cls, pkey, isDark)" class="prop-del-mini ms-1" @click="helpers.deleteProp(cls, pkey, isDark)"><i class="fa-solid fa-trash-can"></i></button>
-                </div>
-              </template>
-            </div>
+                  <div class="prop-item-controls">
+                    <!-- Color Picker -->
+                    <div v-if="defs[pkey].type==='color'" class="color-compact">
+                      <div class="color-swatch-mini" :style="{background:helpers.getPropValue(cls, pkey, isDark)||'#000'}">
+                        <input type="color" :value="helpers.colorToHex(helpers.getPropValue(cls, pkey, isDark)||'#000000')" 
+                               @input="helpers.setPropValue(cls, pkey, $event.target.value, isDark)">
+                      </div>
+                      <input class="prop-input-mini" :value="helpers.getPropValue(cls, pkey, isDark)" @input="helpers.setPropValue(cls, pkey, $event.target.value, isDark)">
+                    </div>
+
+                    <!-- Select -->
+                    <select v-else-if="defs[pkey].type==='select'" class="prop-select-mini w-100" 
+                            :value="helpers.getPropValue(cls, pkey, isDark)"
+                            @change="helpers.setPropValue(cls, pkey, $event.target.value, isDark)">
+                      <option v-for="opt in defs[pkey].options" :key="opt" :value="opt">{{opt}}</option>
+                    </select>
+
+                    <!-- Numeric / Slider -->
+                    <div v-else-if="defs[pkey].type==='slider'" class="unit-input-group w-100">
+                        <input type="text" class="prop-input-mini w-100" 
+                               :value="helpers.getPropValue(cls, pkey, isDark)"
+                               @input="helpers.setPropValue(cls, pkey, $event.target.value, isDark)">
+                    </div>
+
+                    <input v-else class="prop-input-mini w-100" :value="helpers.getPropValue(cls, pkey, isDark)" @input="helpers.setPropValue(cls, pkey, $event.target.value, isDark)">
+                    
+                    <button v-if="helpers.hasPropValue(cls, pkey, isDark)" class="prop-del-mini ms-1" @click="helpers.deleteProp(cls, pkey, isDark)"><i class="fa-solid fa-trash-can"></i></button>
+                  </div>
+                </template>
+              </div>
+            </template>
           </template>
         </template>
       </div>
@@ -168,6 +171,9 @@ const VisualEditorComp = {
     shouldShow(pkey) {
       if (!this.cls) return false;
       
+      // Filter by tag type if provided
+      if (this.tagType && !this.helpers.isPropSupported(this.tagType, pkey)) return false;
+
       // For both Classes and Inline Node editors, we show all categorization properties 
       // so the user can easily discover and set them.
       if (!this.isDark) return true;
@@ -180,6 +186,10 @@ const VisualEditorComp = {
       const hasDark = (this.cls.darkProps && this.cls.darkProps[pkey] !== undefined);
       
       return hasLight || hasDark;
+    },
+    isCategorySupported(cat) {
+      if (!this.tagType) return true;
+      return cat.props.some(pkey => this.helpers.isPropSupported(this.tagType, pkey));
     }
   }
 };

@@ -374,6 +374,8 @@ body.dragging .btn-add-inline{opacity:0.1;pointer-events:none}
 .inspector-section{margin-bottom:16px}
 .inspector-section-label{font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px;display:flex;align-items:center;gap:8px;margin-bottom:10px}
 .inspector-section-label::after{content:'';flex:1;height:1px;background:#f1f5f9}
+.inspector-section-label.sub { grid-column: span 2; margin-top: 14px; width: 100%; }
+.inspector-section-label.sub:first-child { margin-top: 0; }
 
 /* Fields */
 .field-group{margin-bottom:12px}

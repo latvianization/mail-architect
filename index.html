@@ -283,7 +283,7 @@
             <div class="inspector-section-label"><i class="fa-solid fa-wand-magic-sparkles"></i> Component Attributes</div>
             <div class="cls-card-modern open">
               <div class="p-2 bg-white">
-                <visual-editor :cls="selectedNode" :is-dark="false" :defs="PROP_DEFS" :categories="PROP_CATEGORIES" :helpers="editorHelpers" :is-inline="true"></visual-editor>
+                <visual-editor :cls="selectedNode" :tag-type="selectedNode.type" :is-dark="false" :defs="PROP_DEFS" :categories="PROP_CATEGORIES" :helpers="editorHelpers" :is-inline="true"></visual-editor>
               </div>
             </div>
           </div>

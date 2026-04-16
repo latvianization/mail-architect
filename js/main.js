@@ -574,6 +574,13 @@ const app = createApp({
     }
 
 
+    function isPropSupported(type, key) {
+      if (!type) return true; // Default to show if type unknown
+      const allowed = TAG_PROPS[type];
+      if (!allowed) return true; // Default to show all for non-whitelisted tags
+      return allowed.includes(key);
+    }
+
     function hasPropValue(obj, key, isDark = false) {
       if (!obj) return false;
       if (isDark) return obj.darkProps && obj.darkProps[key] !== undefined;
@@ -1592,7 +1599,8 @@ const app = createApp({
         getPropParts, setPropParts,
         getActiveTheme, setActiveTheme,
         isCategoryOpen, toggleCategory, colorToHex, scheduleRender,
-        getCustomProps, addCustomProp, deleteProp, hasPropValue
+        getCustomProps, addCustomProp, deleteProp, hasPropValue,
+        isPropSupported
       },
       getPropValue, setPropValue, getPropNumeric, setPropNumeric,
       getActiveTheme, setActiveTheme,

@@ -123,6 +123,61 @@ const allowedChildrenMap = {
   'mj-accordion-element': ['mj-accordion-title', 'mj-accordion-text'],
   'mj-carousel':  ['mj-carousel-image'],
 };
+const TAG_PROPS = {
+  'mj-body': ['background-color', 'width'],
+  'mj-section': [
+    'background-color', 'background-url', 'background-repeat', 'background-size', 
+    'padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right', 
+    'full-width', 'border', 'border-radius', 'text-align'
+  ],
+  'mj-column': [
+    'background-color', 'width', 'vertical-align', 
+    'padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right', 
+    'border', 'border-radius', 'inner-background-color', 'inner-padding'
+  ],
+  'mj-text': [
+    'color', 'font-family', 'font-size', 'font-weight', 'line-height', 'align', 
+    'padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right', 
+    'container-background-color', 'text-transform', 'text-decoration'
+  ],
+  'mj-image': [
+    'src', 'href', 'alt', 'title', 'target', 'width', 'height', 
+    'padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right', 
+    'fluid-on-mobile', 'align', 'border', 'border-radius'
+  ],
+  'mj-button': [
+    'background-color', 'color', 'font-family', 'font-size', 'font-weight', 'line-height', 
+    'align', 'padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right', 
+    'inner-padding', 'border', 'border-radius', 'href', 'target', 'width', 'vertical-align'
+  ],
+  'mj-divider': [
+    'border-color', 'border-style', 'border-width', 'width', 'align', 
+    'padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right', 
+    'container-background-color'
+  ],
+  'mj-spacer': ['height', 'width', 'container-background-color', 'padding'],
+  'mj-social': [
+    'align', 'font-family', 'font-size', 'icon-size', 'icon-height', 'icon-padding', 
+    'mode', 'padding', 'container-background-color'
+  ],
+  'mj-social-element': [
+    'background-color', 'color', 'font-family', 'font-size', 'font-weight', 
+    'href', 'src', 'target', 'icon-size', 'padding', 'text-padding'
+  ],
+  'mj-hero': [
+    'background-color', 'background-url', 'background-position', 'background-repeat', 'background-size', 
+    'height', 'width', 'padding', 'vertical-align', 'mode'
+  ],
+  'mj-navbar': ['align', 'padding', 'hamburger', 'ico-color', 'ico-font-size'],
+  'mj-navbar-link': ['color', 'font-family', 'font-size', 'font-weight', 'href', 'target', 'padding', 'text-transform'],
+  'mj-accordion': ['container-background-color', 'border', 'padding'],
+  'mj-accordion-element': ['background-color', 'family', 'icon-align', 'icon-height', 'icon-width'],
+  'mj-accordion-title': ['background-color', 'color', 'font-family', 'font-size', 'padding'],
+  'mj-accordion-text': ['background-color', 'color', 'font-family', 'font-size', 'padding'],
+  'mj-table': ['color', 'font-family', 'font-size', 'line-height', 'padding', 'width', 'container-background-color'],
+  'mj-carousel': ['background-color', 'border-radius', 'icon-width', 'left-icon', 'right-icon', 'thumbnails'],
+  'mj-carousel-image': ['src', 'alt', 'href', 'title', 'target']
+};
 const PROP_DEFS = {
   // Typography & Layout
   'color':          { type: 'color', icon: 'fa-droplet' },
