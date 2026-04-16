@@ -574,6 +574,14 @@ const app = createApp({
     }
 
 
+    function hasPropValue(obj, key, isDark = false) {
+      if (!obj) return false;
+      if (isDark) return obj.darkProps && obj.darkProps[key] !== undefined;
+      return (obj.attrs && obj.attrs[key] !== undefined) || 
+             (obj.style && obj.style[key] !== undefined) || 
+             (obj.props && obj.props[key] !== undefined);
+    }
+
     function setPropValue(obj, key, val, isDark = false) {
       if (!obj) return;
       if (isDark) {
@@ -797,7 +805,9 @@ const app = createApp({
           if (n.children) scanInline(n.children);
         }
       }
-      if (bodyNode) scanInline([bodyNode]);
+      // We skip ID-based inline styles for the main code/export views
+      // only including standard MJML attributes that buildAttrs handles.
+      // if (bodyNode) scanInline([bodyNode]); 
 
       const styleComb = (computedStyle.value + '\n' + inlineStyleRules + '\n' + (extraStyle.value || '')).trim();
       const stylePart = styleComb ? `    <mj-style>\n      ${styleComb}\n    </mj-style>\n` : '';
@@ -807,7 +817,7 @@ const app = createApp({
       if (head && head.children) {
         for (const c of head.children) {
           if (c.type === 'mj-attributes') hasTreeAttributes = true;
-          headChildrenHtml += compileNode(c, 2, globalProps.value, typeDefaults.value) + '\n';
+          headChildrenHtml += compileNode(c, 2, globalProps.value, typeDefaults.value, { includeInternalIds: false }) + '\n';
         }
       }
 
@@ -817,7 +827,7 @@ const app = createApp({
       }
 
       const fullHead = `  <mj-head>\n${fonts}${finalAttributesBlock}${stylePart}${headChildrenHtml}  </mj-head>`;
-      const fullBody = bodyNode ? compileNode(bodyNode, 1, globalProps.value, typeDefaults.value, { includeInternalIds: true }) : '  <mj-body></mj-body>';
+      const fullBody = bodyNode ? compileNode(bodyNode, 1, globalProps.value, typeDefaults.value, { includeInternalIds: false }) : '  <mj-body></mj-body>';
       return `<mjml>\n${fullHead}\n${fullBody}\n</mjml>`;
     });
 
@@ -1582,7 +1592,7 @@ const app = createApp({
         getPropParts, setPropParts,
         getActiveTheme, setActiveTheme,
         isCategoryOpen, toggleCategory, colorToHex, scheduleRender,
-        getCustomProps, addCustomProp, deleteProp
+        getCustomProps, addCustomProp, deleteProp, hasPropValue
       },
       getPropValue, setPropValue, getPropNumeric, setPropNumeric,
       getActiveTheme, setActiveTheme,

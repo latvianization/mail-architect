@@ -138,7 +138,7 @@ const VisualEditorComp = {
 
                   <input v-else class="prop-input-mini w-100" :value="helpers.getPropValue(cls, pkey, isDark)" @input="helpers.setPropValue(cls, pkey, $event.target.value, isDark)">
                   
-                  <button v-if="isInline" class="prop-del-mini ms-1" @click="helpers.deleteProp(cls, pkey, isDark)"><i class="fa-solid fa-trash-can"></i></button>
+                  <button v-if="helpers.hasPropValue(cls, pkey, isDark)" class="prop-del-mini ms-1" @click="helpers.deleteProp(cls, pkey, isDark)"><i class="fa-solid fa-trash-can"></i></button>
                 </div>
               </template>
             </div>
