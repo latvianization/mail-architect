@@ -714,6 +714,7 @@ const app = createApp({
         let ps = Object.entries(globalProps.value).map(([k,v]) => `${k}="${String(v).replace(/"/g, '&quot;')}"`).join(' ');
         attrs += `      <mj-all ${ps} />\n`;
       }
+      
       return attrs;
     });
 
@@ -732,48 +733,49 @@ const app = createApp({
       }
       scanTree(tree.value);
 
+      const buildSimpleSelectors = (selector, mp) => {
+        let pStandard = [];
+        for (const [k, v] of Object.entries(mp)) {
+          if (v === undefined || v === null || v === '') continue;
+          let cssK = k === 'align' ? 'text-align' : (k === 'container-background-color' ? 'background-color' : k);
+          pStandard.push(`${cssK}: ${v} !important;`);
+        }
+        return `      ${selector} { ${pStandard.join(' ')} }\n`;
+      };
+
       // 2. Generate CSS Rules for all classes
       let css = '';
       for (const lc of usedClasses) {
         const cls = classes.value.find(c => c.name === lc);
         if (cls) {
           const mp = getMergedProps(cls.props);
-          // If this class is used on mj-body, we also target 'body' for the preview
           const isBodyClass = tree.value[0]?.children?.find(c => c.type === 'mj-body' && c.classes?.includes(lc));
           const selector = isBodyClass ? `.${lc}, body` : `.${lc}`;
-          
-          css += `      ${selector} {\n`;
-          for (const [k, v] of Object.entries(mp)) {
-            if (v !== undefined && v !== null && v !== '') {
-              let cssK = k;
-              if (k === 'align') cssK = 'text-align';
-              if (k === 'container-background-color') cssK = 'background-color';
-              css += `        ${cssK}: ${v};\n`;
-            }
-          }
-          css += `      }\n`;
+          css += buildSimpleSelectors(selector, mp);
         }
       }
 
       // 3. Generate Dark Mode CSS rules
       let darkRules = '';
+
       for (const c of classes.value) {
         if (!usedClasses.has(c.name)) continue;
         if (c.darkProps && Object.keys(c.darkProps).length > 0) {
-          const mp = getMergedProps(c.darkProps);
-          const p = Object.entries(mp).map(([k, v]) => `${k}: ${v} !important;`).join(' ');
-          darkRules += `      .${c.name} { ${p} }\n`;
+          darkRules += buildSimpleSelectors(`.${c.name}`, getMergedProps(c.darkProps));
         }
       }
       function scanDarkNodes(nodes) {
         for (const n of nodes) {
           if (n.darkProps && Object.keys(n.darkProps).length > 0) {
-            const mp = getMergedProps(n.darkProps);
-            const p = Object.entries(mp).map(([k, v]) => `${k}: ${v} !important;`).join(' ');
             if (n.type === 'mj-body') {
-              darkRules += `      body { ${p} }\n`;
+              let rb = [];
+              for (const [k, v] of Object.entries(getMergedProps(n.darkProps))) {
+                let cssK = k === 'align' ? 'text-align' : (k === 'container-background-color' ? 'background-color' : k);
+                rb.push(`${cssK}: ${v} !important;`);
+              }
+              darkRules += `      body { ${rb.join(' ')} }\n`;
             } else {
-              darkRules += `      .mja-${n.id} { ${p} }\n`;
+              darkRules += buildSimpleSelectors(`.mja-${n.id}`, getMergedProps(n.darkProps));
             }
           }
           if (n.children) scanDarkNodes(n.children);
@@ -823,7 +825,10 @@ const app = createApp({
       let hasTreeAttributes = false;
       if (head && head.children) {
         for (const c of head.children) {
-          if (c.type === 'mj-attributes') hasTreeAttributes = true;
+          if (['mj-attributes', 'mj-font', 'mj-style'].includes(c.type)) {
+            if (c.type === 'mj-attributes') hasTreeAttributes = true;
+            continue;
+          }
           headChildrenHtml += compileNode(c, 2, globalProps.value, typeDefaults.value, { includeInternalIds: false }) + '\n';
         }
       }
@@ -865,7 +870,7 @@ const app = createApp({
       let headHtml = '';
       if (head && head.children) {
         for (const c of head.children) {
-          if (c.type !== 'mj-attributes') {
+          if (!['mj-attributes', 'mj-font', 'mj-style'].includes(c.type)) {
              headHtml += compileNode(c, 2, globalProps.value, typeDefaults.value, { includeInternalIds: false }) + '\n';
           }
         }
@@ -1216,7 +1221,6 @@ const app = createApp({
           body > div {
             background-color: #ffffff;
             box-shadow: 0 0 0 1px rgba(0,0,0,0.05), 0 8px 40px rgba(0,0,0,0.08) !important;
-            min-height: 100vh;
           }
         </style>`;
 

@@ -143,6 +143,15 @@ function buildAttrs(node, globalProps = {}, typeDefaults = {}, options = {}) {
     }
   }
 
+  // Force mj-text to inherit color natively to allow CSS classes to cascade effectively 
+  // and override MJML's hard-coded default `#000000` text color without requiring complex child selectors.
+  if (node.type === 'mj-text') {
+    const hasInlineColor = node.attrs?.['color'] || (node.style && node.style['color']);
+    if (!hasInlineColor) {
+      s += ` color="inherit"`;
+    }
+  }
+
   return s;
 }
 
@@ -214,56 +223,89 @@ function parseMjmlToTree(src) {
   // 3. Parse mj-style for dark mode, local overrides, and MIGRATING simple classes to Global Classes
   const styleEl = doc.querySelector('mj-style');
   if (styleEl) {
-    let css = styleEl.textContent;
-    // Improved parser: split by rules, then by selectors
-    const ruleBlocks = css.split('}');
-    ruleBlocks.forEach(block => {
-      const [selectorPart, content] = block.split('{');
-      if (!selectorPart || !content) return;
-      
-      const selectors = selectorPart.split(',').map(s => s.trim());
-      const contentTrim = content.trim();
+    let css = styleEl.textContent.replace(/\/\*[\s\S]*?\*\//g, '');
+    
+    function parseBlocks(cssString) {
+      let blocks = [];
+      let currentSelector = '';
+      let currentBlock = '';
+      let depth = 0;
+      for (let i = 0; i < cssString.length; i++) {
+        let char = cssString[i];
+        if (char === '{') {
+          if (depth === 0) currentSelector = currentSelector.trim();
+          else currentBlock += char;
+          depth++;
+        } else if (char === '}') {
+          depth--;
+          if (depth === 0) {
+            if (currentSelector) blocks.push({ selector: currentSelector, rules: currentBlock.trim() });
+            currentSelector = '';
+            currentBlock = '';
+          } else {
+            currentBlock += char;
+          }
+        } else {
+          if (depth === 0) currentSelector += char;
+          else currentBlock += char;
+        }
+      }
+      return blocks;
+    }
+    
+    let topBlocks = parseBlocks(css);
+    
+    function processRule(selectorPart, contentTrim, isDark) {
+      const selectors = selectorPart.split(',').map(s => s.trim()).filter(Boolean);
       const props = {};
       contentTrim.split(';').forEach(p => {
         const [k, v] = p.split(':');
         if (k && v) props[k.trim()] = v.replace('!important', '').trim();
       });
 
-      let isComplex = false;
-      let handledAsNative = false;
+      const complexSelectors = [];
 
-      // Handle each selector in the comma list
       selectors.forEach(fullSelector => {
         // CASE A: Local ID Overrides (.mja-id)
         if (fullSelector.startsWith('.mja-') && !fullSelector.includes(' ') && !fullSelector.includes(',')) {
-          mjStyleLookup[fullSelector.replace('.mja-', '')] = props;
-          handledAsNative = true;
+          const id = fullSelector.replace('.mja-', '');
+          if (isDark) darkStyleLookup[id] = Object.assign(darkStyleLookup[id] || {}, props);
+          else mjStyleLookup[id] = Object.assign(mjStyleLookup[id] || {}, props);
         }
         // CASE B: Dark Mode Overrides (.mja-forced-dark .className)
-        else if (fullSelector.startsWith('.mja-forced-dark')) {
+        else if (fullSelector.startsWith('.mja-forced-dark') && !isDark) {
           const sub = fullSelector.match(/\.([a-z0-9_-]+)$/i);
-          if (sub) darkStyleLookup[sub[1]] = props;
-          handledAsNative = true;
+          if (sub) darkStyleLookup[sub[1]] = Object.assign(darkStyleLookup[sub[1]] || {}, props);
         }
         // CASE C: Simple Global Classes (.className)
         else if (fullSelector.startsWith('.') && !fullSelector.includes(' ') && !fullSelector.includes('>') && !fullSelector.includes(':')) {
           const name = fullSelector.substring(1);
           let existing = newClasses.find(c => c.name === name);
-          if (existing) {
-            Object.assign(existing.props, props);
-          } else {
-            newClasses.push({ name, props, _open: false, _pk: '', _pv: '', dark: false, darkProps: {} });
-          }
-          handledAsNative = true;
+          if (!existing) { existing = { name, props: {}, _open: false, _pk: '', _pv: '', dark: false, darkProps: {} }; newClasses.push(existing); }
+          if (isDark) { Object.assign(existing.darkProps, props); existing.dark = true; }
+          else Object.assign(existing.props, props);
         }
         // CASE D: Complex selectors (.tg-h1 p, body, etc.)
         else {
-          isComplex = true;
+          complexSelectors.push(fullSelector);
         }
       });
 
-      if (isComplex || !handledAsNative) {
-        extraStyle += `${selectorPart.trim()} { ${contentTrim} }\n`;
+      if (complexSelectors.length > 0) {
+        if (isDark) extraStyle += `@media (prefers-color-scheme: dark) {\n  ${complexSelectors.join(', ')} { ${contentTrim} }\n}\n`;
+        else extraStyle += `${complexSelectors.join(', ')} { ${contentTrim} }\n`;
+      }
+    }
+
+    topBlocks.forEach(block => {
+      let isDarkMedia = block.selector.toLowerCase().includes('@media') && block.selector.toLowerCase().includes('prefers-color-scheme: dark');
+      if (isDarkMedia) {
+        let innerBlocks = parseBlocks(block.rules);
+        innerBlocks.forEach(inner => processRule(inner.selector, inner.rules, true));
+      } else if (block.selector.toLowerCase().includes('@media')) {
+        extraStyle += `${block.selector} { ${block.rules} }\n`;
+      } else {
+        processRule(block.selector, block.rules, false);
       }
     });
   }
