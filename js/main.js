@@ -9,11 +9,7 @@ const app = createApp({
     const viewMode = ref('builder');
     const manualMjml = ref('');
 
-    watch(viewMode, (v) => {
-      if (v === 'code') {
-        manualMjml.value = mjmlSource.value;
-      }
-    });
+
     const showGuides = ref(false);
     const showAdvanced = ref(false);
     const showAdvancedInline = ref(false);
@@ -68,6 +64,7 @@ const app = createApp({
       let body = compileNode(node, 0);
 
       // If the node is a content-level component, wrap it in section and column so MJML renders it correctly
+
       const isContent = ['mj-text', 'mj-image', 'mj-button', 'mj-divider', 'mj-spacer', 'mj-social', 'mj-navbar', 'mj-accordion', 'mj-table'].includes(node.type);
       if (isContent) {
         body = `<mj-section><mj-column>${body}</mj-column></mj-section>`;
@@ -363,8 +360,23 @@ const app = createApp({
     });
     function getClassObj(name) { return classes.value.find(x => x.name === name) || null; }
     function toggleInlineEdit(name) { inlineEditClass.value = inlineEditClass.value === name ? null : name; }
-    function addClass() { if (pendingClass.value && selectedNode.value) { if (!selectedNode.value.classes) selectedNode.value.classes = []; selectedNode.value.classes.push(pendingClass.value); pendingClass.value = ''; } }
-    function removeClass(n) { if (selectedNode.value) { selectedNode.value.classes = (selectedNode.value.classes || []).filter(c => c !== n); if (inlineEditClass.value === n) inlineEditClass.value = null; } }
+    function addClass() { 
+      if (pendingClass.value && selectedNode.value) { 
+        if (!selectedNode.value.classes) selectedNode.value.classes = []; 
+        if (!selectedNode.value.classes.includes(pendingClass.value)) {
+          selectedNode.value.classes.push(pendingClass.value); 
+        }
+        pendingClass.value = ''; 
+        scheduleRender();
+      } 
+    }
+    function removeClass(n) { 
+      if (selectedNode.value) { 
+        selectedNode.value.classes = (selectedNode.value.classes || []).filter(c => c !== n); 
+        if (inlineEditClass.value === n) inlineEditClass.value = null; 
+        scheduleRender();
+      } 
+    }
     function createClass() {
       const name = newClassName.value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
       if (!name) return null;
@@ -385,6 +397,7 @@ const app = createApp({
         if (!selectedNode.value.classes.includes(cls.name)) {
           selectedNode.value.classes.push(cls.name);
         }
+        scheduleRender();
       }
     }
     function deleteClass(name) {
@@ -628,7 +641,17 @@ const app = createApp({
 
     // Node helpers
     function nodeHasContent(type) { return ['mj-text', 'mj-button', 'mj-raw', 'mj-table', 'mj-navbar-link', 'mj-social-element'].includes(type); }
+    const allCategorizedProps = computed(() => {
+      const s = new Set();
+      PROP_CATEGORIES.forEach(cat => cat.props.forEach(p => s.add(p)));
+      return s;
+    });
+
     function stdAttrs(type) { return stdAttrMap[type] || []; }
+    function getFilteredStdAttrs(node) {
+      if (!node) return [];
+      return stdAttrs(node.type).filter(a => !allCategorizedProps.value.has(a.key));
+    }
 
     function addInlineProp(node, key) {
       if (!node.style) node.style = {};
@@ -653,21 +676,24 @@ const app = createApp({
       return merged;
     }
 
-    const mjmlSource = computed(() => {
-      if (!tree.value || !tree.value.length) return '';
-      
-      // If the tree already starts with mjml, we can compile it directly
-      // but we still need to merge the "Global" metadata (Fonts/Classes) into the head.
-      // For now, let's keep the programmatic injection so existing Global UI works.
-      
-      const root = tree.value[0];
-      if (root.type !== 'mjml') return '';
+    let debounceTimer = null;
 
-      // Find mj-head node
-      const headIdx = root.children.findIndex(c => c.type === 'mj-head');
-      const head = root.children[headIdx];
-      const bodyNode = root.children.find(c => c.type === 'mj-body');
+    // Shared: MJML global attributes (mj-all and component defaults)
+    const globalAttributes = computed(() => {
+      let attrs = '';
+      for (const [tag, props] of Object.entries(typeDefaults.value)) {
+        let s = `      <${tag}`;
+        for (const [k, v] of Object.entries(props)) s += ` ${k}="${String(v).replace(/"/g, '&quot;')}"`;
+        attrs += s + ' />\n';
+      }
+      if (Object.keys(globalProps.value).length > 0) {
+        let ps = Object.entries(globalProps.value).map(([k,v]) => `${k}="${String(v).replace(/"/g, '&quot;')}"`).join(' ');
+        attrs += `      <mj-all ${ps} />\n`;
+      }
+      return attrs;
+    });
 
+    const computedStyle = computed(() => {
       // 1. Scan tree for all used classes
       const usedClasses = new Set();
       function scanTree(nodes) {
@@ -682,49 +708,37 @@ const app = createApp({
       }
       scanTree(tree.value);
 
-      // 2. Generate mj-attributes (only for used classes)
-      let attrs = '';
-      for (const [tag, props] of Object.entries(typeDefaults.value)) {
-        let s = `      <${tag}`;
-        for (const [k, v] of Object.entries(props)) {
-          s += ` ${k}="${String(v).replace(/"/g, '&quot;')}"`;
-        }
-        attrs += s + ' />\n';
-      }
-      
-      // Global mj-all
-      if (Object.keys(globalProps.value).length > 0) {
-        let ps = Object.entries(globalProps.value).map(([k,v]) => `${k}="${String(v).replace(/"/g, '&quot;')}"`).join(' ');
-        attrs += `      <mj-all ${ps} />\n`;
-      }
-
-      // 3. Generate CSS Rules in mj-style for all classes
-      let linkCss = '';
+      // 2. Generate CSS Rules for all classes
+      let css = '';
       for (const lc of usedClasses) {
         const cls = classes.value.find(c => c.name === lc);
         if (cls) {
           const mp = getMergedProps(cls.props);
-          linkCss += `      .${lc} {\n`;
+          // If this class is used on mj-body, we also target 'body' for the preview
+          const isBodyClass = tree.value[0]?.children?.find(c => c.type === 'mj-body' && c.classes?.includes(lc));
+          const selector = isBodyClass ? `.${lc}, body` : `.${lc}`;
+          
+          css += `      ${selector} {\n`;
           for (const [k, v] of Object.entries(mp)) {
             if (v !== undefined && v !== null && v !== '') {
               let cssK = k;
               if (k === 'align') cssK = 'text-align';
               if (k === 'container-background-color') cssK = 'background-color';
-              linkCss += `        ${cssK}: ${v};\n`;
+              css += `        ${cssK}: ${v};\n`;
             }
           }
-          linkCss += `      }\n`;
+          css += `      }\n`;
         }
       }
 
-      // 4. Generate Dark Mode CSS
-      let darkRulesCollected = '';
+      // 3. Generate Dark Mode CSS rules
+      let darkRules = '';
       for (const c of classes.value) {
         if (!usedClasses.has(c.name)) continue;
         if (c.darkProps && Object.keys(c.darkProps).length > 0) {
           const mp = getMergedProps(c.darkProps);
           const p = Object.entries(mp).map(([k, v]) => `${k}: ${v} !important;`).join(' ');
-          darkRulesCollected += `      .${c.name} { ${p} }\n`;
+          darkRules += `      .${c.name} { ${p} }\n`;
         }
       }
       function scanDarkNodes(nodes) {
@@ -733,37 +747,42 @@ const app = createApp({
             const mp = getMergedProps(n.darkProps);
             const p = Object.entries(mp).map(([k, v]) => `${k}: ${v} !important;`).join(' ');
             if (n.type === 'mj-body') {
-              darkRulesCollected += `      body { ${p} }\n`;
+              darkRules += `      body { ${p} }\n`;
             } else {
-              darkRulesCollected += `      .mja-${n.id} { ${p} }\n`;
+              darkRules += `      .mja-${n.id} { ${p} }\n`;
             }
           }
           if (n.children) scanDarkNodes(n.children);
         }
       }
-      if (bodyNode) scanDarkNodes([bodyNode]);
+      scanDarkNodes(tree.value);
 
-      let darkCss = '';
-      if (darkRulesCollected) {
-        if (previewTheme.value === 'dark') {
-          darkCss = `\n      /* Dark Mode Simulation */\n${darkRulesCollected}\n`;
-        } else {
-          darkCss = `\n      @media (prefers-color-scheme: dark) {\n${darkRulesCollected}      }\n`;
-        }
+      if (darkRules) {
+        css += `\n      @media (prefers-color-scheme: dark) {\n${darkRules}      }\n`;
+      }
+      return css;
+    });
+
+    const mjmlSource = computed(() => {
+      const root = tree.value[0];
+      if (!root || root.type !== 'mjml') return '';
+      const head = root.children.find(c => c.type === 'mj-head');
+      const bodyNode = root.children.find(c => c.type === 'mj-body');
+
+      let fonts = '';
+      if (globalFonts.value.length === 0) {
+        fonts = '    <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />\n';
+      } else {
+        for (const f of globalFonts.value) fonts += `    <mj-font name="${f.name}" href="${f.href}" />\n`;
       }
 
-      // 5. Generate Inline Overrides
       let inlineStyleRules = '';
       function scanInline(nodes) {
         for (const n of nodes) {
-          const inlineProps = Object.entries(n.style || {}).filter(([k, v]) => {
-            return v !== undefined && v !== null && v !== '' && !stdMjmlAttrs.has(k);
-          });
+          const inlineProps = Object.entries(n.style || {}).filter(([k, v]) => v !== '' && !stdMjmlAttrs.has(k));
           if (inlineProps.length > 0) {
-            inlineStyleRules += `      .mja-${n.id} {\n`;
-            for (const [k, v] of inlineProps) {
-              inlineStyleRules += `        ${k}: ${v} !important;\n`;
-            }
+            inlineStyleRules += `      #mja-${n.id} {\n`;
+            for (const [k, v] of inlineProps) inlineStyleRules += `        ${k}: ${v} !important;\n`;
             inlineStyleRules += `      }\n`;
           }
           if (n.children) scanInline(n.children);
@@ -771,21 +790,9 @@ const app = createApp({
       }
       if (bodyNode) scanInline([bodyNode]);
 
-      // 6. Generate Fonts
-      let fonts = '';
-      if (globalFonts.value.length === 0) {
-        fonts = '    <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />\n';
-      } else {
-        for (const f of globalFonts.value) {
-          fonts += `    <mj-font name="${f.name}" href="${f.href}" />\n`;
-        }
-      }
-
-      const styleComb = (linkCss + darkCss + inlineStyleRules + '\n' + (extraStyle.value || '')).trim();
+      const styleComb = (computedStyle.value + '\n' + inlineStyleRules + '\n' + (extraStyle.value || '')).trim();
       const stylePart = styleComb ? `    <mj-style>\n      ${styleComb}\n    </mj-style>\n` : '';
 
-      // --- ASSEMBLY ---
-      // We manually construct mj-head content because it's merged from Global settings + Tree nodes
       let headChildrenHtml = '';
       let hasTreeAttributes = false;
       if (head && head.children) {
@@ -795,31 +802,59 @@ const app = createApp({
         }
       }
 
-      // If we have programmatic attributes and NO mj-attributes node in the tree, we create one.
-      // If we HAVE an mj-attributes node in the tree, we should ideally merge them, but for now 
-      // let's just ensure we don't double-wrap if hasTreeAttributes is true.
-      
       let finalAttributesBlock = '';
-      if (attrs.trim()) {
-        if (hasTreeAttributes) {
-          // This is tricky: we'd need to inject 'attrs' into the existing mj-attributes string.
-          // For simplicity and to avoid invalid MJML, if the user has a custom mj-attributes node,
-          // we'll just prepend our programmatic ones in their own block (MJML allows multiple mj-attributes).
-          finalAttributesBlock = `    <mj-attributes>\n${attrs}    </mj-attributes>\n`;
-        } else {
-          finalAttributesBlock = `    <mj-attributes>\n${attrs}    </mj-attributes>\n`;
-        }
+      if (globalAttributes.value) {
+        finalAttributesBlock = `    <mj-attributes>\n${globalAttributes.value}    </mj-attributes>\n`;
       }
 
       const fullHead = `  <mj-head>\n${fonts}${finalAttributesBlock}${stylePart}${headChildrenHtml}  </mj-head>`;
-      const fullBody = bodyNode ? compileNode(bodyNode, 1, globalProps.value, typeDefaults.value) : '  <mj-body></mj-body>';
-
+      const fullBody = bodyNode ? compileNode(bodyNode, 1, globalProps.value, typeDefaults.value, { includeInternalIds: true }) : '  <mj-body></mj-body>';
       return `<mjml>\n${fullHead}\n${fullBody}\n</mjml>`;
+    });
+
+    watch([viewMode, mjmlSource], ([v, source]) => {
+      if (v === 'code') {
+        manualMjml.value = source;
+      }
+    });
+
+    // Provide a "Clean" MJML for export
+    const cleanMjmlSource = computed(() => {
+      const root = tree.value[0];
+      if (!root || root.type !== 'mjml') return '';
+      const head = root.children.find(c => c.type === 'mj-head');
+      const bodyNode = root.children.find(c => c.type === 'mj-body');
+      
+      let fonts = '';
+      if (globalFonts.value.length === 0) {
+        fonts = '    <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />\n';
+      } else {
+        for (const f of globalFonts.value) fonts += `    <mj-font name="${f.name}" href="${f.href}" />\n`;
+      }
+
+      // We exclude mja- internal IDs from clean export's style block
+      // computedStyle already contains clean class rules and dark modes.
+      const stylePart = computedStyle.value ? `    <mj-style>\n${computedStyle.value}    </mj-style>\n` : '';
+      
+      let headHtml = '';
+      if (head && head.children) {
+        for (const c of head.children) {
+          if (c.type !== 'mj-attributes') {
+             headHtml += compileNode(c, 2, globalProps.value, typeDefaults.value, { includeInternalIds: false }) + '\n';
+          }
+        }
+      }
+      
+      const finalAttributesBlock = globalAttributes.value ? `    <mj-attributes>\n${globalAttributes.value}    </mj-attributes>\n` : '';
+      const headBlock = `  <mj-head>\n${fonts}${finalAttributesBlock}${stylePart}${headHtml}  </mj-head>`;
+      const bodyBlock = bodyNode ? compileNode(bodyNode, 1, globalProps.value, typeDefaults.value, { includeInternalIds: false }) : '  <mj-body></mj-body>';
+      
+      return `<mjml>\n${headBlock}\n${bodyBlock}\n</mjml>`;
     });
 
 
     // Keep mja-ids in MJML for round-trip support
-    const cleanMjmlSource = computed(() => mjmlSource.value);
+    // (Old duplicate removed)
 
     // MJML resolver
     function getMjml2Html() {
@@ -860,9 +895,18 @@ const app = createApp({
       const doc = previewFrame.value.contentDocument;
       if (!doc) return;
 
+      // Since MJML strips 'id', we target the 'mja-{id}' class which we mapped during renderPreview
       const el = doc.querySelector(`.mja-${selectedId.value}`);
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+
+    function scrollToTreeNode() {
+      if (!selectedId.value) return;
+      const el = document.getElementById(`tree-node-${selectedId.value}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
     }
 
@@ -1076,16 +1120,55 @@ const app = createApp({
         }
       } catch { }
     }
-    watch(selectedId, (id) => { applySelectionHighlight(id); });
+    watch(selectedId, (id) => {
+      showRawHtml.value = false;
+      nextTick(() => {
+        if (rteEl.value && selectedNode.value) {
+          rteEl.value.innerHTML = selectedNode.value.content || '';
+        }
+        // Bidirectional Scroll Sync
+        setTimeout(() => {
+          scrollToSelected();
+          scrollToTreeNode();
+        }, 150);
+      });
+      applySelectionHighlight(id);
+    });
 
-    // Preview render
-    let debounceTimer = null;
-    function renderPreview() {
+    const previewMjmlSource = computed(() => {
+      const root = tree.value[0];
+      if (!root) return '';
+      const head = root.children.find(c => c.type === 'mj-head');
+      const bodyNode = root.children.find(c => c.type === 'mj-body');
+
+      let fonts = '';
+      if (globalFonts.value.length === 0) {
+        fonts = '    <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />\n';
+      } else {
+        for (const f of globalFonts.value) fonts += `    <mj-font name="${f.name}" href="${f.href}" />\n`;
+      }
+
+      const styleComb = (computedStyle.value || '').trim();
+      const stylePart = styleComb ? `    <mj-style>\n      ${styleComb}\n    </mj-style>\n` : '';
+
+      let headChildrenHtml = '';
+      if (head && head.children) {
+        for (const c of head.children) headChildrenHtml += compileNode(c, 2, globalProps.value, typeDefaults.value, { includeInternalIds: true, previewMode: true }) + '\n';
+      }
+
+      const fullHead = `  <mj-head>\n${fonts}    <mj-attributes>\n${globalAttributes.value}    </mj-attributes>\n${stylePart}${headChildrenHtml}  </mj-head>`;
+      const fullBody = bodyNode ? compileNode(bodyNode, 1, globalProps.value, typeDefaults.value, { includeInternalIds: true, previewMode: true }) : '  <mj-body></mj-body>';
+
+      return `<mjml>\n${fullHead}\n${fullBody}\n</mjml>`;
+    });
+
+    const renderPreview = () => {
       if (!previewFrame.value) return;
       try {
         const fn = getMjml2Html();
-        // Expand self-closing tags to full tags for maximum compatibility with all MJML parser versions
-        const expandedMjml = mjmlSource.value.replace(/<(mj-[a-z0-9-]+)([^>]*?)\s*\/>/gi, '<$1$2></$1>');
+        // Expand self-closing tags to full tags
+        const expandedMjml = previewMjmlSource.value.replace(/<(mj-[a-z0-9-]+)([^>]*?)\s*\/>/gi, '<$1$2></$1>');
+        
         const r = fn(expandedMjml, { keepComments: false, validationLevel: 'soft' });
         compileError.value = false;
         let html = r.html;
@@ -1126,8 +1209,11 @@ const app = createApp({
             e.preventDefault();
             let el = e.target;
             while (el && el !== doc.body) {
-              const mc = [...el.classList].find(c => c.startsWith('mja-') && c !== 'mja-hl');
-              if (mc) { selectNode(mc.replace('mja-', '')); return; }
+              const mc = [...el.classList].find(c => c.startsWith('mja-') && c !== 'mja-hl' && c !== 'mja-selected');
+              if (mc) {
+                selectNode(mc.replace('mja-', ''));
+                return;
+              }
               el = el.parentElement;
             }
           }, true);
@@ -1136,7 +1222,7 @@ const app = createApp({
             e.preventDefault();
             let el = e.target;
             while (el && el !== doc.body) {
-              const mc = [...el.classList].find(c => c.startsWith('mja-') && c !== 'mja-hl');
+              const mc = [...el.classList].find(c => c.startsWith('mja-') && c !== 'mja-hl' && c !== 'mja-selected');
               if (mc) {
                 selectNode(mc.replace('mja-', ''));
                 nextTick(() => {
@@ -1458,7 +1544,7 @@ const app = createApp({
       newClassName, createClass, createAndApplyClass, deleteClass, toggleClass, editClass, goToClassDef, addProp, deleteProp, addDarkProp, deleteDarkProp,
       addPropImmediate, addDarkPropImmediate, addInlineProp, deleteInlineProp,
 
-      nodeHasContent, stdAttrs, iconFor, propSuggestions,
+      nodeHasContent, stdAttrs, getFilteredStdAttrs, iconFor, propSuggestions,
       isColorProp, colorToHex,
       mjmlSource, cleanMjmlSource, setDevice, setTheme, copyCode,
       globalProps, typeDefaults, globalFonts, extraStyle,

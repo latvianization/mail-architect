@@ -278,9 +278,9 @@
             </div>
           </div>
 
-          <!-- Inline CSS Section -->
-          <div class="inspector-section">
-            <div class="inspector-section-label">Inline CSS</div>
+          <!-- Component Attributes Section -->
+          <div class="inspector-section" v-if="tab==='node' && selectedNode">
+            <div class="inspector-section-label"><i class="fa-solid fa-wand-magic-sparkles"></i> Component Attributes</div>
             <div class="cls-card-modern open">
               <div class="p-2 bg-white">
                 <visual-editor :cls="selectedNode" :is-dark="false" :defs="PROP_DEFS" :categories="PROP_CATEGORIES" :helpers="editorHelpers" :is-inline="true"></visual-editor>
@@ -288,10 +288,10 @@
             </div>
           </div>
 
-          <!-- Attributes -->
-          <div class="inspector-section" v-if="stdAttrs(selectedNode.type).length">
+          <!-- Additional Attributes (Only show those not in categories) -->
+          <div class="inspector-section" v-if="selectedNode && getFilteredStdAttrs(selectedNode).length">
             <div class="inspector-section-label">Additional Attributes</div>
-            <div class="field-group mb-2" v-for="attr in stdAttrs(selectedNode.type)" :key="attr.key">
+            <div class="field-group mb-2" v-for="attr in getFilteredStdAttrs(selectedNode)" :key="attr.key">
               <div class="field-label">{{attr.key}}</div>
               <input class="field-input py-1" v-model="selectedNode.attrs[attr.key]" :placeholder="attr.placeholder">
             </div>

@@ -89,15 +89,27 @@ function colorToHex(val) {
 
 
 // ── MJML compilation helpers ────────────────────────────────
-function buildAttrs(node, globalProps = {}, typeDefaults = {}) {
+function buildAttrs(node, globalProps = {}, typeDefaults = {}, options = {}) {
   let s = '';
+  const includeInternalIds = options.includeInternalIds !== false;
+  const previewMode = options.previewMode === true;
   
   // Tags that do NOT support css-class or custom inline style
-  const noRawStyleTags = new Set(['mjml', 'mj-head', 'mj-body', 'mj-attributes', 'mj-all', 'mj-class', 'mj-font', 'mj-style', 'mj-title', 'mj-preview', 'mj-breakpoint']);
+  const noRawStyleTags = new Set(['mjml', 'mj-head', 'mj-attributes', 'mj-all', 'mj-class', 'mj-font', 'mj-style', 'mj-title', 'mj-preview', 'mj-breakpoint']);
+
+  if (includeInternalIds && !previewMode) {
+    s += ` id="mja-${node.id}"`;
+  }
 
   if (!noRawStyleTags.has(node.type)) {
-    if (node.classes && node.classes.length) s += ` css-class="${[`mja-${node.id}`, ...node.classes].join(' ')}"`;
-    else s += ` css-class="mja-${node.id}"`;
+    const classList = [...(node.classes || [])];
+    if (previewMode && includeInternalIds) {
+      classList.unshift(`mja-${node.id}`);
+    }
+    const finalClasses = [...new Set(classList.filter(Boolean))];
+    if (finalClasses.length) {
+      s += ` css-class="${finalClasses.join(' ')}"`;
+    }
   }
 
   const tagDefaults = typeDefaults[node.type] || {};
@@ -135,9 +147,9 @@ function buildAttrs(node, globalProps = {}, typeDefaults = {}) {
 }
 
 
-function compileNode(node, depth, globalProps = {}, typeDefaults = {}) {
+function compileNode(node, depth, globalProps = {}, typeDefaults = {}, options = {}) {
   const pad = '  '.repeat(depth);
-  const attrs = buildAttrs(node, globalProps, typeDefaults);
+  const attrs = buildAttrs(node, globalProps, typeDefaults, options);
   const isLeaf = node.children === undefined;
   if (isLeaf && !node.content) return `${pad}<${node.type}${attrs} />`;
   let out = `${pad}<${node.type}${attrs}>`;
@@ -145,7 +157,7 @@ function compileNode(node, depth, globalProps = {}, typeDefaults = {}) {
     let c = node.content;
     out += '\n' + '  '.repeat(depth + 1) + c;
   }
-  if (node.children) { if (node.children.length) { out += '\n'; for (const c of node.children) out += compileNode(c, depth + 1, globalProps, typeDefaults) + '\n'; out += pad; } }
+  if (node.children) { if (node.children.length) { out += '\n'; for (const c of node.children) out += compileNode(c, depth + 1, globalProps, typeDefaults, options) + '\n'; out += pad; } }
   out += `</${node.type}>`;
   return out;
 }
@@ -268,26 +280,18 @@ function parseMjmlToTree(src) {
 
   function parseEl(el) {
     const type = el.tagName.toLowerCase();
+    const idAttr = el.getAttribute('id') || '';
     const cssClassLine = el.getAttribute('css-class') || el.getAttribute('class') || '';
-    const m = cssClassLine.match(/\bmja-([a-z0-9]+)\b/);
+    const m = idAttr.match(/^mja-([a-z0-9]+)$/);
     const id = m ? m[1] : uid();
 
     const cls = (el.getAttribute('mj-class') || '').split(' ').filter(Boolean);
-    // Capture manual classes, but MIGRATE any that have discovered rules to Global Classes
-    const manualCls = cssClassLine.split(' ').filter(c => {
-      if (!c || c.startsWith('mja-')) return false;
-      if (cls.includes(c)) return false;
-      
-      // If we found a rule for this in mj-style, treat it as a Global Class
-      if (newClasses.some(xc => xc.name === c)) {
-        cls.push(c);
-        return false;
-      }
-      return true;
-    });
+    const cssCls = (el.getAttribute('css-class') || el.getAttribute('class') || '').split(' ').filter(c => c && !c.startsWith('mja-'));
+    cssCls.forEach(c => { if (!cls.includes(c)) cls.push(c); });
+    const manualCls = []; // Already captured in cls above.
     const attrs = {};
     for (const a of el.attributes) {
-      if (a.name !== 'mj-class' && a.name !== 'css-class') attrs[a.name] = a.value;
+      if (a.name !== 'mj-class' && a.name !== 'css-class' && a.name !== 'id') attrs[a.name] = a.value;
     }
 
     let content = '', children = undefined;
@@ -301,8 +305,7 @@ function parseMjmlToTree(src) {
     }
 
     // --- Attribute Priority Merging ---
-    const style = { ...globalDefaults };
-    if (typeDefaults[type]) Object.assign(style, typeDefaults[type]);
+    const style = {};
     
     // Explicit tag attributes take precedence and are moved to 'style' if they are standard MJML props
     for (const [k, v] of Object.entries(attrs)) {

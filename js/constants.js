@@ -124,36 +124,61 @@ const allowedChildrenMap = {
   'mj-carousel':  ['mj-carousel-image'],
 };
 const PROP_DEFS = {
+  // Typography & Layout
+  'color':          { type: 'color', icon: 'fa-droplet' },
+  'font-family':    { type: 'input', icon: 'fa-font' },
   'font-size':      { type: 'slider', min: 8, max: 80, unit: 'px', icon: 'fa-text-height' },
   'font-weight':    { type: 'select', options: ['300', '400', '500', '600', '700', '800', 'normal', 'bold'], icon: 'fa-bold' },
   'line-height':    { type: 'slider', min: 1, max: 3, step: 0.1, unit: '', icon: 'fa-line-height' },
-  'letter-spacing': { type: 'slider', min: -2, max: 10, unit: 'px', icon: 'fa-arrows-left-right' },
   'align':          { type: 'select', options: ['left', 'center', 'right', 'justify'], icon: 'fa-align-justify' },
-  'color':          { type: 'color', icon: 'fa-droplet' },
   'background-color':{ type: 'color', icon: 'fa-fill-drip' },
+  'text-transform': { type: 'select', options: ['none', 'uppercase', 'lowercase', 'capitalize'], icon: 'fa-font' },
+
+  // Spacing & Sizing
   'padding':        { type: 'input', icon: 'fa-expand' },
-  'margin':         { type: 'input', icon: 'fa-compress' },
+  'padding-top':    { type: 'input', icon: 'fa-arrow-up' },
+  'padding-bottom': { type: 'input', icon: 'fa-arrow-down' },
+  'padding-left':   { type: 'input', icon: 'fa-arrow-left' },
+  'padding-right':  { type: 'input', icon: 'fa-arrow-right' },
+  'width':          { type: 'slider', min: 0, max: 100, unit: '%', icon: 'fa-arrows-left-right' },
+  'height':         { type: 'slider', min: 0, max: 500, unit: 'px', icon: 'fa-arrows-up-down' },
+  'border':         { type: 'input', icon: 'fa-square-minus' },
   'border-radius':  { type: 'input', icon: 'fa-circle-notch' },
   'border-width':   { type: 'slider', min: 0, max: 20, unit: 'px', icon: 'fa-border-all' },
   'border-style':   { type: 'select', options: ['none', 'solid', 'dashed', 'dotted'], icon: 'fa-border-none' },
   'border-color':   { type: 'color', icon: 'fa-palette' },
-  'width':          { type: 'slider', min: 0, max: 100, unit: '%', icon: 'fa-arrows-left-right' },
-  'height':         { type: 'slider', min: 0, max: 500, unit: 'px', icon: 'fa-arrows-up-down' },
+  'margin':         { type: 'input', icon: 'fa-compress' },
+
+  // Image Specifics
+  'src':            { type: 'input', icon: 'fa-image' },
+  'href':           { type: 'input', icon: 'fa-link' },
+  'alt':            { type: 'input', icon: 'fa-quote-left' },
+  'title':          { type: 'input', icon: 'fa-circle-info' },
+  'fluid-on-mobile':{ type: 'select', options: ['true', 'false'], icon: 'fa-mobile-screen' },
+
+  // Column & Section Controls
+  'vertical-align': { type: 'select', options: ['top', 'middle', 'bottom'], icon: 'fa-align-center' },
+  'full-width':     { type: 'select', options: ['true', 'false'], icon: 'fa-arrows-left-right' },
   'background-url': { type: 'input', icon: 'fa-image' },
   'background-size':{ type: 'select', options: ['cover', 'contain', 'auto'], icon: 'fa-maximize' },
   'background-repeat':{ type: 'select', options: ['no-repeat', 'repeat', 'repeat-x', 'repeat-y'], icon: 'fa-repeat' },
   'container-background-color':{ type: 'color', icon: 'fa-fill-drip' },
+
+  // Button & Navbar Functional
   'inner-background-color':{ type: 'color', icon: 'fa-fill-drip' },
   'inner-padding':  { type: 'input', icon: 'fa-expand' },
-  'fluid-on-mobile':{ type: 'select', options: ['true', 'false'], icon: 'fa-mobile-screen' },
-  'text-transform': { type: 'select', options: ['none', 'uppercase', 'lowercase', 'capitalize'], icon: 'fa-font' },
+  'target':         { type: 'select', options: ['_blank', '_self'], icon: 'fa-up-right-from-square' },
+  'hamburger':      { type: 'select', options: ['hamburger', 'none'], icon: 'fa-burger' },
+  'ico-color':      { type: 'color', icon: 'fa-palette' },
+  'ico-font-size':  { type: 'slider', min: 8, max: 60, unit: 'px', icon: 'fa-text-height' },
 };
 
 const PROP_CATEGORIES = [
-  { name: 'Typography', icon: 'fa-font', props: ['font-size', 'font-weight', 'line-height', 'align', 'color', 'text-transform'] },
-  { name: 'Spacing',    icon: 'fa-arrows-up-down-left-right', props: ['padding', 'margin', 'inner-padding'] },
-  { name: 'Appearance', icon: 'fa-palette', props: ['background-color', 'background-url', 'background-size', 'background-repeat', 'container-background-color', 'inner-background-color', 'width', 'height', 'fluid-on-mobile'] },
-  { name: 'Borders',    icon: 'fa-square', props: ['border-width', 'border-style', 'border-color', 'border-radius'] },
+  { name: 'Typography & Layout', icon: 'fa-font', props: ['color', 'font-family', 'font-size', 'font-weight', 'line-height', 'align', 'background-color'] },
+  { name: 'Spacing & Sizing',    icon: 'fa-arrows-up-down-left-right', props: ['padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right', 'width', 'height', 'border', 'border-radius'] },
+  { name: 'Image Specifics',     icon: 'fa-regular fa-image', props: ['src', 'href', 'alt', 'fluid-on-mobile', 'title'] },
+  { name: 'Column & Section Controls', icon: 'fa-table-columns', props: ['vertical-align', 'full-width', 'background-url', 'background-repeat', 'background-size', 'container-background-color'] },
+  { name: 'Button & Navbar Functional', icon: 'fa-sliders', props: ['inner-padding', 'target', 'hamburger', 'ico-color', 'ico-font-size'] },
 ];
 
 const templateLib = [

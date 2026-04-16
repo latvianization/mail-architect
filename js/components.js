@@ -10,7 +10,7 @@ const TreeNodeComp = {
 
   template: `
     <div class="tree-node" @mouseleave.self="$emit('hover',null)" :data-type="node.type">
-      <div class="tree-node-row" :class="{selected:node.id===selectedId}"
+      <div class="tree-node-row" :id="'tree-node-' + node.id" :class="{selected:node.id===selectedId}"
            :data-type="node.type"
            @click.stop="$emit('select',node.id)"
            @mouseenter.stop="$emit('hover',node.id)"
@@ -155,7 +155,7 @@ const VisualEditorComp = {
               <button class="prop-del-mini" @click="helpers.deleteProp(cls, k, isDark)"><i class="fa-solid fa-xmark"></i></button>
            </div>
         </div>
-        <div v-if="!isInline || !isDark" class="add-prop-mini">
+        <div v-if="!isInline" class="add-prop-mini">
           <input class="prop-input-mini w-100" list="prop-hints" placeholder="+ New custom property..." 
                  @keyup.enter="helpers.addCustomProp(cls, $event.target.value, isDark); $event.target.value=''">
         </div>
@@ -168,24 +168,18 @@ const VisualEditorComp = {
     shouldShow(pkey) {
       if (!this.cls) return false;
       
-      // Inline CSS (Light Mode): Only show if explicitly set in attrs or style
-      if (this.isInline && !this.isDark) {
-        const hasAttr = this.cls.attrs && this.cls.attrs[pkey] !== undefined;
-        const hasStyle = this.cls.style && this.cls.style[pkey] !== undefined;
-        return hasAttr || hasStyle;
-      }
+      // For both Classes and Inline Node editors, we show all categorization properties 
+      // so the user can easily discover and set them.
+      if (!this.isDark) return true;
 
-      // Dark Mode (Classes and Inline): Only show if set in Light Mode
-      if (this.isDark) {
-        if (this.isInline) {
-          return (this.cls.attrs && this.cls.attrs[pkey] !== undefined) || (this.cls.style && this.cls.style[pkey] !== undefined);
-        } else {
-          return this.cls.props && this.cls.props[pkey] !== undefined;
-        }
-      }
-
-      // Global Classes (Light Mode): Show all attributes
-      return true;
+      // In Dark Mode, we show a property if it has a value in Light Mode OR if it already has a Dark override.
+      // This keeps the dark mode UI focused on what's actually being used.
+      const hasLight = (this.cls.attrs && this.cls.attrs[pkey] !== undefined) || 
+                       (this.cls.style && this.cls.style[pkey] !== undefined) ||
+                       (this.cls.props && this.cls.props[pkey] !== undefined);
+      const hasDark = (this.cls.darkProps && this.cls.darkProps[pkey] !== undefined);
+      
+      return hasLight || hasDark;
     }
   }
 };
