@@ -210,7 +210,7 @@ const app = createApp({
     function findNode(nodes, id) { for (const n of nodes) { if (n.id === id) return n; if (n.children) { const f = findNode(n.children, id); if (f) return f; } } return null; }
     function removeNode(nodes, target) { const i = nodes.findIndex(n => n.id === target.id); if (i > -1) { nodes.splice(i, 1); return true; } for (const n of nodes) { if (n.children && removeNode(n.children, target)) return true; } return false; }
 
-    function selectNode(id) { selectedId.value = id; tab.value = 'node'; }
+    function selectNode(id) { selectedId.value = id; tab.value = 'node'; classes.value.forEach(c => c._open = false); }
     function deleteNode(n) {
       if (['mjml', 'mj-head', 'mj-body'].includes(n.type)) {
         if (n.type === 'mj-body') {
@@ -424,6 +424,14 @@ const app = createApp({
       const wasOpen = target._open;
       classes.value.forEach(c => c._open = false);
       target._open = !wasOpen;
+    }
+    function toggleClassByName(name) {
+      const target = classes.value.find(c => c.name === name);
+      if(target) {
+        const wasOpen = target._open;
+        classes.value.forEach(c => c._open = false);
+        target._open = !wasOpen;
+      }
     }
     function editClass(name) {
       toggleInlineEdit(name);
@@ -1575,7 +1583,7 @@ const app = createApp({
       }), tree, classes,
       cloneNode, selectNode, deleteNode, clearDoc,
       pendingClass, inlineEditClass, availableClasses, getClassObj, toggleInlineEdit, addClass, removeClass,
-      newClassName, createClass, createAndApplyClass, deleteClass, toggleClass, editClass, goToClassDef, addProp, deleteProp, addDarkProp, deleteDarkProp,
+      newClassName, createClass, createAndApplyClass, deleteClass, toggleClass, toggleClassByName, editClass, goToClassDef, addProp, deleteProp, addDarkProp, deleteDarkProp,
       addPropImmediate, addDarkPropImmediate, addInlineProp, deleteInlineProp,
 
       nodeHasContent, stdAttrs, getFilteredStdAttrs, iconFor, propSuggestions,

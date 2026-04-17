@@ -247,12 +247,15 @@
 
             <div class="inspector-section-label mt-4">Class Configurations</div>
             <!-- Property Editors for selection -->
-            <div v-for="cname in selectedNode.classes" :key="'ed-'+cname" class="cls-card-modern open mt-2">
-              <div class="cls-card-header" style="cursor:default">
+            <div v-for="cname in selectedNode.classes" :key="'ed-'+cname" class="cls-card-modern mt-2" :class="{open: getClassObj(cname)?._open}">
+              <div class="cls-card-header" @click="toggleClassByName(cname)" style="cursor:pointer">
                 <span class="cls-card-title">.{{cname}}</span>
-                <button class="prop-del" @click="deleteClass(cname)" title="Delete Class Globally"><i class="fa-solid fa-trash-can"></i></button>
+                <div class="d-flex align-items-center gap-2">
+                  <button class="prop-del" @click.stop="deleteClass(cname)" title="Delete Class Globally"><i class="fa-solid fa-trash-can"></i></button>
+                  <i class="fa-solid" :class="getClassObj(cname)?._open ? 'fa-chevron-up' : 'fa-chevron-down'" style="opacity:0.3"></i>
+                </div>
               </div>
-              <div class="p-2 bg-white" v-if="getClassObj(cname)">
+              <div class="p-2 bg-white" v-if="getClassObj(cname)" v-show="getClassObj(cname)._open">
                 <!-- Theme Accordion -->
                 <div class="theme-accordion">
                   <!-- Light Block -->

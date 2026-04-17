@@ -107,7 +107,7 @@ const VisualEditorComp = {
           <template v-if="isCategorySupported(cat)">
             <div class="inspector-section-label sub">{{cat.name}}</div>
             <template v-for="pkey in cat.props" :key="pkey">
-              <div v-if="shouldShow(pkey)" class="prop-item-compact" :class="{'prop-item-full': defs[pkey].type==='sides'}">
+              <div v-if="shouldShow(pkey)" class="prop-item-compact" :class="{'prop-item-full': defs[pkey].type==='sides', 'has-value': helpers.hasPropValue(cls, pkey, isDark)}">
                 <template v-if="defs[pkey]">
                   <div class="prop-item-label" :title="pkey">
                     <i class="fa-solid" :class="defs[pkey].icon"></i>
@@ -151,7 +151,7 @@ const VisualEditorComp = {
 
       <!-- Advanced / Other properties flattened -->
       <div class="advanced-mini">
-        <div v-for="(v,k) in helpers.getCustomProps(cls, isDark)" :key="k" class="prop-item-compact">
+        <div v-for="(v,k) in helpers.getCustomProps(cls, isDark)" :key="k" class="prop-item-compact has-value">
            <div class="prop-item-label">{{k}}</div>
            <div class="prop-item-controls">
               <input class="prop-input-mini w-100" :value="v" @input="helpers.setPropValue(cls, k, $event.target.value, isDark)">
@@ -174,18 +174,7 @@ const VisualEditorComp = {
       // Filter by tag type if provided
       if (this.tagType && !this.helpers.isPropSupported(this.tagType, pkey)) return false;
 
-      // For both Classes and Inline Node editors, we show all categorization properties 
-      // so the user can easily discover and set them.
-      if (!this.isDark) return true;
-
-      // In Dark Mode, we show a property if it has a value in Light Mode OR if it already has a Dark override.
-      // This keeps the dark mode UI focused on what's actually being used.
-      const hasLight = (this.cls.attrs && this.cls.attrs[pkey] !== undefined) || 
-                       (this.cls.style && this.cls.style[pkey] !== undefined) ||
-                       (this.cls.props && this.cls.props[pkey] !== undefined);
-      const hasDark = (this.cls.darkProps && this.cls.darkProps[pkey] !== undefined);
-      
-      return hasLight || hasDark;
+      return true;
     },
     isCategorySupported(cat) {
       if (!this.tagType) return true;
