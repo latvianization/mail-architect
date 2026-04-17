@@ -743,12 +743,41 @@ const app = createApp({
 
       const buildSimpleSelectors = (selector, mp) => {
         let pStandard = [];
+        let pBg = [];
+        let pColor = [];
         for (const [k, v] of Object.entries(mp)) {
           if (v === undefined || v === null || v === '') continue;
           let cssK = k === 'align' ? 'text-align' : (k === 'container-background-color' ? 'background-color' : k);
           pStandard.push(`${cssK}: ${v} !important;`);
+          if (cssK === 'background-color' || cssK === 'background' || cssK.startsWith('border-radius')) {
+             pBg.push(`${cssK}: ${v} !important;`);
+          } else if (cssK === 'color') {
+             pColor.push(`${cssK}: ${v} !important;`);
+          }
         }
-        return `      ${selector} { ${pStandard.join(' ')} }\n`;
+        
+        let res = `      ${selector} { ${pStandard.join(' ')} }\n`;
+        
+        if (pBg.length > 0 || pColor.length > 0) {
+          const innerSelectors = selector.split(',').map(s => s.trim()).filter(s => s && s !== 'body').map(s => {
+             let sels = [];
+             if (pBg.length > 0) {
+                sels.push(`${s} > table`, `${s} > div > table`);
+             }
+             if (pColor.length > 0) {
+                sels.push(`${s} div`, `${s} span`, `${s} a`, `${s} td`);
+             }
+             return sels.join(', ');
+          }).filter(Boolean).join(', ');
+          
+          if (innerSelectors) {
+             const rules = [];
+             if (pBg.length > 0) rules.push(...pBg);
+             if (pColor.length > 0) rules.push(...pColor);
+             res += `      ${innerSelectors} { ${rules.join(' ')} }\n`;
+          }
+        }
+        return res;
       };
 
       // 2. Generate CSS Rules for all classes
@@ -826,7 +855,14 @@ const app = createApp({
       // only including standard MJML attributes that buildAttrs handles.
       // if (bodyNode) scanInline([bodyNode]); 
 
-      const styleComb = (computedStyle.value + '\n' + inlineStyleRules + '\n' + (extraStyle.value || '')).trim();
+      const globalFixes = `
+      [style*="border-radius"] > table,
+      [style*="border-radius"] > div > table {
+        border-radius: inherit !important;
+      }
+      `;
+
+      const styleComb = (globalFixes + '\n' + computedStyle.value + '\n' + inlineStyleRules + '\n' + (extraStyle.value || '')).trim();
       const stylePart = styleComb ? `    <mj-style>\n      ${styleComb}\n    </mj-style>\n` : '';
 
       let headChildrenHtml = '';
