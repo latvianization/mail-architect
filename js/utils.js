@@ -106,6 +106,14 @@ function buildAttrs(node, globalProps = {}, typeDefaults = {}, options = {}) {
     if (previewMode && includeInternalIds) {
       classList.unshift(`mja-${node.id}`);
     }
+
+    if (node.type === 'mj-column') {
+      const w = node.style?.width || node.attrs?.width;
+      if (w && String(w).endsWith('px')) {
+        classList.push(`mja-fix-w-${String(w).replace('px', '')}`);
+      }
+    }
+
     const finalClasses = [...new Set(classList.filter(Boolean))];
     if (finalClasses.length) {
       s += ` css-class="${finalClasses.join(' ')}"`;

@@ -8,6 +8,7 @@ const app = createApp({
     const previewTheme = ref('light');
     const viewMode = ref('builder');
     const manualMjml = ref('');
+    const codeTab = ref('mjml');
 
 
     const showGuides = ref(false);
@@ -729,9 +730,17 @@ const app = createApp({
     const computedStyle = computed(() => {
       // 1. Scan tree for all used classes
       const usedClasses = new Set();
+      const pxWidths = new Set();
+
       function scanTree(nodes) {
         for (const n of nodes) {
           if (n.classes) n.classes.forEach(c => usedClasses.add(c));
+          if (n.type === 'mj-column') {
+            const w = n.style?.width || n.attrs?.width;
+            if (w && String(w).endsWith('px')) {
+              pxWidths.add(String(w).replace('px', ''));
+            }
+          }
           if (n.content) {
             const matches = n.content.matchAll(/\bclass="([^"]+)"/g);
             for (const m of matches) m[1].split(' ').filter(Boolean).forEach(c => usedClasses.add(c));
@@ -823,6 +832,21 @@ const app = createApp({
       if (darkRules) {
         css += `\n      @media (prefers-color-scheme: dark) {\n${darkRules}      }\n`;
       }
+
+      if (pxWidths.size > 0) {
+        for (const w of pxWidths) {
+          css += `
+      .mja-fix-w-${w}, 
+      .mja-fix-w-${w} > table, 
+      .mja-fix-w-${w} > div > table {
+        width: ${w}px !important;
+        max-width: ${w}px !important;
+        min-width: ${w}px !important;
+      }
+`;
+        }
+      }
+
       return css;
     });
 
@@ -927,6 +951,17 @@ const app = createApp({
       return `<mjml>\n${headBlock}\n${bodyBlock}\n</mjml>`;
     });
 
+    const generatedHtml = computed(() => {
+      try {
+        const fn = getMjml2Html();
+        const r = fn(cleanMjmlSource.value, { keepComments: false, validationLevel: 'soft' });
+        let html = r.html;
+        if (window.html_beautify) html = window.html_beautify(html, { indent_size: 2, wrap_line_length: 120 });
+        return html;
+      } catch (e) {
+        return '<!-- Error generating HTML -->\n' + e.message;
+      }
+    });
 
     // Keep mja-ids in MJML for round-trip support
     // (Old duplicate removed)
@@ -1337,7 +1372,13 @@ const app = createApp({
     function setDevice(w) { deviceWidth.value = w; }
     function setTheme(t) { previewTheme.value = t; scheduleRender(); }
 
-    function copyCode() { navigator.clipboard.writeText(cleanMjmlSource.value).then(() => toast('MJML copied!')); }
+    function copyCode() {
+      if (codeTab.value === 'html') {
+        navigator.clipboard.writeText(generatedHtml.value).then(() => toast('HTML copied!'));
+      } else {
+        navigator.clipboard.writeText(cleanMjmlSource.value).then(() => toast('MJML copied!'));
+      }
+    }
     function copyHtml() { navigator.clipboard.writeText(exportHtml.value).then(() => toast('HTML copied!')); }
     function downloadHtml() {
       try {
@@ -1612,6 +1653,7 @@ const app = createApp({
       confirmNewOpen, hasSavedEmail, promptNewEmail, executeNewEmail,
       undo, redo, canUndo, canRedo,
       deviceWidth, deviceLabel, previewTheme, viewMode, showGuides, tab, selectedId, selectedNode,
+      codeTab, generatedHtml,
       previewFrame, previewWrap, previewHeight, compileError, hasContent,
       componentLibrary: computed(() => {
         // Exclude root-level singletons from the general gallery

@@ -229,8 +229,8 @@ const PROP_DEFS = {
 };
 
 const PROP_CATEGORIES = [
-  { name: 'Typography & Layout', icon: 'fa-font', props: ['color', 'font-family', 'font-size', 'font-weight', 'line-height', 'align', 'background-color'] },
-  { name: 'Spacing & Sizing',    icon: 'fa-arrows-up-down-left-right', props: ['padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right', 'width', 'height', 'border', 'border-radius'] },
+  { name: 'Typography & Layout', icon: 'fa-font', props: ['color', 'font-family', 'font-size', 'font-weight', 'line-height', 'align', 'background-color', 'text-transform'] },
+  { name: 'Spacing & Sizing',    icon: 'fa-arrows-up-down-left-right', props: ['padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right', 'width', 'height', 'margin', 'border', 'border-radius', 'border-width', 'border-style', 'border-color'] },
   { name: 'Image Specifics',     icon: 'fa-regular fa-image', props: ['src', 'href', 'alt', 'fluid-on-mobile', 'title'] },
   { name: 'Column & Section Controls', icon: 'fa-table-columns', props: ['vertical-align', 'full-width', 'background-url', 'background-repeat', 'background-size', 'container-background-color'] },
   { name: 'Button & Navbar Functional', icon: 'fa-sliders', props: ['inner-padding', 'target', 'hamburger', 'ico-color', 'ico-font-size'] },
