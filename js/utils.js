@@ -136,7 +136,7 @@ function buildAttrs(node, globalProps = {}, typeDefaults = {}, options = {}) {
 
 
     for (const [k, v] of Object.entries(node.style)) {
-      if (v === undefined || v === null || v === '' || k === 'border-width' || k === 'border-style' || k === 'border-color') continue;
+      if (v === undefined || v === null || v === '') continue;
       if (stdMjmlAttrs.has(k)) {
         // Suppress if value matches global default OR tag-specific default
         if (globalProps && globalProps[k] === v) continue;
