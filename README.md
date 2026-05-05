@@ -49,7 +49,7 @@ MailArchitect is a client-side application that runs entirely in the browser.
 
 This project is licensed under the [GPL-3.0 License](LICENSE).
 
-[DEMO] (https://inx.lv/JDjpA)
+[DEMO] (https://latvianization.github.io/mail-architect/)
 ---
 
 *Crafted with ❤️ for the email development community.*
