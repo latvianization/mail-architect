@@ -118,10 +118,7 @@
                 {{compileError ? 'Error' : 'Live'}}
               </span>
             </span>
-            <div class="d-flex align-items-center gap-1" style="background:#f1f5f9;padding:2px;border-radius:6px">
-              <button class="tool-btn" :class="{active:previewTheme==='light'}" @click="setTheme('light')" title="Light Preview"><i class="fa-solid fa-sun"></i></button>
-              <button class="tool-btn" :class="{active:previewTheme==='dark'}" @click="setTheme('dark')" title="Dark Preview"><i class="fa-solid fa-moon"></i></button>
-            </div>
+
           </div>
           
           <div class="preview-frame-wrap" ref="previewWrap">

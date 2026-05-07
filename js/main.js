@@ -1370,7 +1370,7 @@ const app = createApp({
     function scheduleRender() { if (debounceTimer) clearTimeout(debounceTimer); debounceTimer = setTimeout(renderPreview, 600); }
     watch([tree, classes, previewTheme], scheduleRender, { deep: true });
     function setDevice(w) { deviceWidth.value = w; }
-    function setTheme(t) { previewTheme.value = t; scheduleRender(); }
+
 
     function copyCode() {
       if (codeTab.value === 'html') {
@@ -1666,7 +1666,7 @@ const app = createApp({
 
       nodeHasContent, stdAttrs, getFilteredStdAttrs, iconFor, propSuggestions,
       isColorProp, colorToHex,
-      mjmlSource, cleanMjmlSource, setDevice, setTheme, copyCode,
+      mjmlSource, cleanMjmlSource, setDevice, copyCode,
       globalProps, typeDefaults, globalFonts, extraStyle,
       exportOpen, exportTab, exportHtml, openExport, copyHtml, downloadHtml,
       manualMjml, applyManualMjml,
