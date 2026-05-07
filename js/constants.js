@@ -126,29 +126,35 @@ const allowedChildrenMap = {
 const TAG_PROPS = {
   'mj-body': ['background-color', 'width'],
   'mj-section': [
-    'background-color', 'background-url', 'background-repeat', 'background-size', 
+    'background-color', 'background-url', 'background-repeat', 'background-size', 'background-position',
+    'padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right', 
+    'full-width', 'border', 'border-radius', 'text-align', 'direction'
+  ],
+  'mj-wrapper': [
+    'background-color', 'background-url', 'background-repeat', 'background-size', 'background-position',
     'padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right', 
     'full-width', 'border', 'border-radius', 'text-align'
   ],
   'mj-column': [
     'background-color', 'width', 'vertical-align', 
     'padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right', 
-    'border', 'border-radius', 'inner-background-color', 'inner-padding'
+    'border', 'border-radius', 'inner-background-color', 'inner-padding', 'direction'
   ],
   'mj-text': [
-    'color', 'font-family', 'font-size', 'font-weight', 'line-height', 'align', 
+    'color', 'font-family', 'font-size', 'font-weight', 'line-height', 'letter-spacing', 'align', 
     'padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right', 
     'container-background-color', 'text-transform', 'text-decoration'
   ],
   'mj-image': [
     'src', 'href', 'alt', 'title', 'target', 'width', 'height', 
     'padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right', 
-    'fluid-on-mobile', 'align', 'border', 'border-radius'
+    'fluid-on-mobile', 'align', 'border', 'border-radius', 'container-background-color'
   ],
   'mj-button': [
-    'background-color', 'color', 'font-family', 'font-size', 'font-weight', 'line-height', 
+    'background-color', 'color', 'font-family', 'font-size', 'font-weight', 'line-height', 'letter-spacing',
     'align', 'padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right', 
-    'inner-padding', 'border', 'border-radius', 'href', 'target', 'width', 'vertical-align'
+    'inner-padding', 'border', 'border-radius', 'href', 'target', 'width', 'vertical-align',
+    'container-background-color', 'text-transform', 'text-decoration'
   ],
   'mj-divider': [
     'border-color', 'border-style', 'border-width', 'width', 'align', 
@@ -158,25 +164,42 @@ const TAG_PROPS = {
   'mj-spacer': ['height', 'width', 'container-background-color', 'padding'],
   'mj-social': [
     'align', 'font-family', 'font-size', 'icon-size', 'icon-height', 'icon-padding', 
-    'mode', 'padding', 'container-background-color'
+    'mode', 'padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right',
+    'container-background-color', 'inner-padding', 'text-padding'
   ],
   'mj-social-element': [
     'background-color', 'color', 'font-family', 'font-size', 'font-weight', 
-    'href', 'src', 'target', 'icon-size', 'padding', 'text-padding'
+    'href', 'src', 'target', 'icon-size', 'icon-height', 'padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right',
+    'text-padding', 'line-height', 'text-decoration'
   ],
   'mj-hero': [
     'background-color', 'background-url', 'background-position', 'background-repeat', 'background-size', 
-    'height', 'width', 'padding', 'vertical-align', 'mode'
+    'height', 'width', 'padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right',
+    'vertical-align', 'mode'
   ],
-  'mj-navbar': ['align', 'padding', 'hamburger', 'ico-color', 'ico-font-size'],
-  'mj-navbar-link': ['color', 'font-family', 'font-size', 'font-weight', 'href', 'target', 'padding', 'text-transform'],
-  'mj-accordion': ['container-background-color', 'border', 'padding'],
-  'mj-accordion-element': ['background-color', 'family', 'icon-align', 'icon-height', 'icon-width'],
-  'mj-accordion-title': ['background-color', 'color', 'font-family', 'font-size', 'padding'],
-  'mj-accordion-text': ['background-color', 'color', 'font-family', 'font-size', 'padding'],
-  'mj-table': ['color', 'font-family', 'font-size', 'line-height', 'padding', 'width', 'container-background-color'],
-  'mj-carousel': ['background-color', 'border-radius', 'icon-width', 'left-icon', 'right-icon', 'thumbnails'],
-  'mj-carousel-image': ['src', 'alt', 'href', 'title', 'target']
+  'mj-navbar': [
+    'align', 'padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right',
+    'hamburger', 'ico-color', 'ico-font-size'
+  ],
+  'mj-navbar-link': [
+    'color', 'font-family', 'font-size', 'font-weight', 'href', 'target', 
+    'padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right',
+    'text-transform', 'text-decoration', 'line-height'
+  ],
+  'mj-accordion': [
+    'container-background-color', 'border', 'padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right',
+    'font-family'
+  ],
+  'mj-accordion-element': ['background-color', 'family', 'icon-align', 'icon-height', 'icon-width', 'icon-position'],
+  'mj-accordion-title': ['background-color', 'color', 'font-family', 'font-size', 'padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right'],
+  'mj-accordion-text': ['background-color', 'color', 'font-family', 'font-size', 'padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right'],
+  'mj-table': [
+    'color', 'font-family', 'font-size', 'line-height', 'padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right',
+    'width', 'container-background-color', 'border', 'cellpadding', 'cellspacing'
+  ],
+  'mj-carousel': ['background-color', 'border-radius', 'icon-width', 'left-icon', 'right-icon', 'thumbnails', 'align'],
+  'mj-group': ['width', 'vertical-align', 'background-color', 'direction'],
+  'mj-carousel-image': ['src', 'alt', 'href', 'title', 'target', 'thumbnails-src']
 };
 const PROP_DEFS = {
   // Typography & Layout
@@ -185,9 +208,12 @@ const PROP_DEFS = {
   'font-size':      { type: 'slider', min: 8, max: 80, unit: 'px', icon: 'fa-text-height' },
   'font-weight':    { type: 'select', options: ['300', '400', '500', '600', '700', '800', 'normal', 'bold'], icon: 'fa-bold' },
   'line-height':    { type: 'slider', min: 1, max: 3, step: 0.1, unit: '', icon: 'fa-line-height' },
+  'letter-spacing': { type: 'input', icon: 'fa-text-width' },
   'align':          { type: 'select', options: ['left', 'center', 'right', 'justify'], icon: 'fa-align-justify' },
   'background-color':{ type: 'color', icon: 'fa-fill-drip' },
   'text-transform': { type: 'select', options: ['none', 'uppercase', 'lowercase', 'capitalize'], icon: 'fa-font' },
+  'text-decoration':{ type: 'select', options: ['none', 'underline', 'overline', 'line-through'], icon: 'fa-underline' },
+  'direction':      { type: 'select', options: ['ltr', 'rtl'], icon: 'fa-arrow-right-arrow-left' },
 
   // Spacing & Sizing
   'padding':        { type: 'input', icon: 'fa-expand' },
@@ -203,6 +229,8 @@ const PROP_DEFS = {
   'border-style':   { type: 'select', options: ['none', 'solid', 'dashed', 'dotted'], icon: 'fa-border-none' },
   'border-color':   { type: 'color', icon: 'fa-palette' },
   'margin':         { type: 'input', icon: 'fa-compress' },
+  'cellpadding':    { type: 'input', icon: 'fa-table-cells' },
+  'cellspacing':    { type: 'input', icon: 'fa-table-cells-large' },
 
   // Image Specifics
   'src':            { type: 'input', icon: 'fa-image' },
@@ -210,6 +238,7 @@ const PROP_DEFS = {
   'alt':            { type: 'input', icon: 'fa-quote-left' },
   'title':          { type: 'input', icon: 'fa-circle-info' },
   'fluid-on-mobile':{ type: 'select', options: ['true', 'false'], icon: 'fa-mobile-screen' },
+  'thumbnails-src': { type: 'input', icon: 'fa-image' },
 
   // Column & Section Controls
   'vertical-align': { type: 'select', options: ['top', 'middle', 'bottom'], icon: 'fa-align-center' },
@@ -217,23 +246,33 @@ const PROP_DEFS = {
   'background-url': { type: 'input', icon: 'fa-image' },
   'background-size':{ type: 'select', options: ['cover', 'contain', 'auto'], icon: 'fa-maximize' },
   'background-repeat':{ type: 'select', options: ['no-repeat', 'repeat', 'repeat-x', 'repeat-y'], icon: 'fa-repeat' },
+  'background-position':{ type: 'input', icon: 'fa-location-dot' },
+  'text-align':     { type: 'select', options: ['left', 'center', 'right', 'justify'], icon: 'fa-align-left' },
   'container-background-color':{ type: 'color', icon: 'fa-fill-drip' },
 
   // Button & Navbar Functional
   'inner-background-color':{ type: 'color', icon: 'fa-fill-drip' },
   'inner-padding':  { type: 'input', icon: 'fa-expand' },
+  'text-padding':   { type: 'input', icon: 'fa-expand' },
   'target':         { type: 'select', options: ['_blank', '_self'], icon: 'fa-up-right-from-square' },
   'hamburger':      { type: 'select', options: ['hamburger', 'none'], icon: 'fa-burger' },
   'ico-color':      { type: 'color', icon: 'fa-palette' },
   'ico-font-size':  { type: 'slider', min: 8, max: 60, unit: 'px', icon: 'fa-text-height' },
+
+  // Accordion Specific
+  'icon-align':     { type: 'select', options: ['top', 'middle', 'bottom'], icon: 'fa-align-center' },
+  'icon-position':  { type: 'select', options: ['left', 'right'], icon: 'fa-arrows-left-right' },
+  'icon-height':    { type: 'input', icon: 'fa-arrows-up-down' },
+  'icon-width':     { type: 'input', icon: 'fa-arrows-left-right' },
 };
 
 const PROP_CATEGORIES = [
-  { name: 'Typography & Layout', icon: 'fa-font', props: ['color', 'font-family', 'font-size', 'font-weight', 'line-height', 'align', 'background-color', 'text-transform'] },
-  { name: 'Spacing & Sizing',    icon: 'fa-arrows-up-down-left-right', props: ['padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right', 'width', 'height', 'margin', 'border', 'border-radius', 'border-width', 'border-style', 'border-color'] },
-  { name: 'Image Specifics',     icon: 'fa-regular fa-image', props: ['src', 'href', 'alt', 'fluid-on-mobile', 'title'] },
-  { name: 'Column & Section Controls', icon: 'fa-table-columns', props: ['vertical-align', 'full-width', 'background-url', 'background-repeat', 'background-size', 'container-background-color'] },
-  { name: 'Button & Navbar Functional', icon: 'fa-sliders', props: ['inner-padding', 'target', 'hamburger', 'ico-color', 'ico-font-size'] },
+  { name: 'Typography & Layout', icon: 'fa-font', props: ['color', 'font-family', 'font-size', 'font-weight', 'line-height', 'letter-spacing', 'align', 'background-color', 'text-transform', 'text-decoration', 'direction'] },
+  { name: 'Spacing & Sizing',    icon: 'fa-arrows-up-down-left-right', props: ['padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right', 'width', 'height', 'margin', 'border', 'border-radius', 'border-width', 'border-style', 'border-color', 'cellpadding', 'cellspacing'] },
+  { name: 'Image Specifics',     icon: 'fa-regular fa-image', props: ['src', 'href', 'alt', 'fluid-on-mobile', 'title', 'thumbnails-src'] },
+  { name: 'Column & Section Controls', icon: 'fa-table-columns', props: ['vertical-align', 'full-width', 'background-url', 'background-repeat', 'background-size', 'background-position', 'text-align', 'container-background-color'] },
+  { name: 'Button & Navbar Functional', icon: 'fa-sliders', props: ['inner-padding', 'text-padding', 'target', 'hamburger', 'ico-color', 'ico-font-size'] },
+  { name: 'Accordion Controls',  icon: 'fa-rectangle-list', props: ['icon-align', 'icon-position', 'icon-height', 'icon-width'] },
 ];
 
 const templateLib = [
