@@ -102,13 +102,25 @@ function buildAttrs(node, globalProps = {}, typeDefaults = {}, options = {}) {
   }
 
   if (!noRawStyleTags.has(node.type)) {
-    const classList = [...(node.classes || [])];
+    const classList = (node.classes || []).filter(c => !c.startsWith('mja-fix-w-'));
     if (previewMode && includeInternalIds) {
       classList.unshift(`mja-${node.id}`);
     }
 
-    if (node.type === 'mj-column') {
-      const w = node.style?.width || node.attrs?.width;
+    if (node.type === 'mj-column' || node.type === 'mj-group') {
+      let w = node.style?.width || node.attrs?.width;
+      
+      // If no direct width, check if any applied class defines one
+      if (!w && options.allClasses && node.classes) {
+        for (const cn of node.classes) {
+          const cDef = options.allClasses.find(x => x.name === cn);
+          if (cDef && (cDef.props?.width || cDef.style?.width || cDef.attrs?.width)) {
+            w = cDef.props?.width || cDef.style?.width || cDef.attrs?.width;
+            break;
+          }
+        }
+      }
+
       if (w && String(w).endsWith('px')) {
         classList.push(`mja-fix-w-${String(w).replace('px', '')}`);
       }

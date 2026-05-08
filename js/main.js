@@ -564,6 +564,12 @@ const app = createApp({
         if (obj.style) delete obj.style[key];
         if (obj.props) delete obj.props[key];
       }
+
+      // Cleanup mja-fix-w classes if width deleted
+      if (key === 'width' && obj.classes) {
+        obj.classes = obj.classes.filter(c => !c.startsWith('mja-fix-w-'));
+      }
+
       scheduleRender();
     }
 
@@ -613,6 +619,12 @@ const app = createApp({
           obj.props[key] = val;
         }
       }
+
+      // Cleanup mja-fix-w classes if width changed
+      if (key === 'width' && obj.classes) {
+        obj.classes = obj.classes.filter(c => !c.startsWith('mja-fix-w-'));
+      }
+
       scheduleRender();
     }
 
@@ -735,7 +747,7 @@ const app = createApp({
       function scanTree(nodes) {
         for (const n of nodes) {
           if (n.classes) n.classes.forEach(c => usedClasses.add(c));
-          if (n.type === 'mj-column') {
+          if (n.type === 'mj-column' || n.type === 'mj-group') {
             const w = n.style?.width || n.attrs?.width;
             if (w && String(w).endsWith('px')) {
               pxWidths.add(String(w).replace('px', ''));
@@ -749,6 +761,17 @@ const app = createApp({
         }
       }
       scanTree(tree.value);
+
+      // Also check if any used class defines a width
+      for (const lc of usedClasses) {
+        const cls = classes.value.find(c => c.name === lc);
+        if (cls) {
+          const mp = getMergedProps(cls.props);
+          if (mp.width && String(mp.width).endsWith('px')) {
+            pxWidths.add(String(mp.width).replace('px', ''));
+          }
+        }
+      }
 
       const buildSimpleSelectors = (selector, mp) => {
         let pStandard = [];
@@ -939,14 +962,14 @@ const app = createApp({
       if (head && head.children) {
         for (const c of head.children) {
           if (!['mj-attributes', 'mj-font', 'mj-style'].includes(c.type)) {
-             headHtml += compileNode(c, 2, globalProps.value, typeDefaults.value, { includeInternalIds: false }) + '\n';
+             headHtml += compileNode(c, 2, globalProps.value, typeDefaults.value, { includeInternalIds: false, allClasses: classes.value }) + '\n';
           }
         }
       }
       
       const finalAttributesBlock = globalAttributes.value ? `    <mj-attributes>\n${globalAttributes.value}    </mj-attributes>\n` : '';
       const headBlock = `  <mj-head>\n${fonts}${finalAttributesBlock}${stylePart}${headHtml}  </mj-head>`;
-      const bodyBlock = bodyNode ? compileNode(bodyNode, 1, globalProps.value, typeDefaults.value, { includeInternalIds: false }) : '  <mj-body></mj-body>';
+      const bodyBlock = bodyNode ? compileNode(bodyNode, 1, globalProps.value, typeDefaults.value, { includeInternalIds: false, allClasses: classes.value }) : '  <mj-body></mj-body>';
       
       return `<mjml>\n${headBlock}\n${bodyBlock}\n</mjml>`;
     });
@@ -1267,11 +1290,11 @@ const app = createApp({
 
       let headChildrenHtml = '';
       if (head && head.children) {
-        for (const c of head.children) headChildrenHtml += compileNode(c, 2, globalProps.value, typeDefaults.value, { includeInternalIds: true, previewMode: true }) + '\n';
+        for (const c of head.children) headChildrenHtml += compileNode(c, 2, globalProps.value, typeDefaults.value, { includeInternalIds: true, previewMode: true, allClasses: classes.value }) + '\n';
       }
 
       const fullHead = `  <mj-head>\n${fonts}    <mj-attributes>\n${globalAttributes.value}    </mj-attributes>\n${stylePart}${headChildrenHtml}  </mj-head>`;
-      const fullBody = bodyNode ? compileNode(bodyNode, 1, globalProps.value, typeDefaults.value, { includeInternalIds: true, previewMode: true }) : '  <mj-body></mj-body>';
+      const fullBody = bodyNode ? compileNode(bodyNode, 1, globalProps.value, typeDefaults.value, { includeInternalIds: true, previewMode: true, allClasses: classes.value }) : '  <mj-body></mj-body>';
 
       return `<mjml>\n${fullHead}\n${fullBody}\n</mjml>`;
     });
