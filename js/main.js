@@ -7,6 +7,7 @@ const app = createApp({
     const myTemplates = ref([]);
     const mySnippets = ref([]);
     const templatesOpen = ref(false);
+    const snippetsOpen = ref(false);
 
     if (window.fbHelper) {
       window.fbHelper.onAuthStateChanged(async (user) => {
@@ -245,7 +246,7 @@ const app = createApp({
       const last = undoStack.value[undoStack.value.length - 1];
       if (last !== stateStr) {
         undoStack.value.push(stateStr);
-        if (undoStack.value.length > 50) undoStack.value.shift();
+        if (undoStack.value.length > 20) undoStack.value.shift();
         redoStack.value = [];
       }
     }
@@ -1666,10 +1667,35 @@ const app = createApp({
       } catch (e) { toast('MJML error: ' + e.message, false); }
     }
 
-    // ── Autosave to localStorage ──────────────────────────────────
-    let saveTimer = null;
-    function saveNow() {
+    // ── Autosave to localStorage & Firebase ───────────────────────
+    const cloudSavePending = ref(false);
+    const cloudSaveCountdown = ref(0);
+    let cloudInterval = null;
+    let localSaveTimer = null;
+
+    function saveNowLocal() {
       if (welcomeOpen.value) return;
+      try {
+        const payload = {
+          tree: tree.value,
+          classes: classes.value,
+          globalProps: globalProps.value,
+          typeDefaults: typeDefaults.value,
+          globalFonts: globalFonts.value,
+          extraStyle: extraStyle.value,
+          undoStack: undoStack.value,
+          redoStack: redoStack.value,
+          ts: Date.now()
+        };
+        localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
+      } catch (e) { console.warn('Local save failed:', e); }
+    }
+
+    function saveNowCloud() {
+      if (welcomeOpen.value || !currentUser.value || !window.fbHelper) return;
+      cloudSavePending.value = false;
+      cloudSaveCountdown.value = 0;
+      if (cloudInterval) clearInterval(cloudInterval);
       try {
         const payload = {
           tree: tree.value,
@@ -1680,17 +1706,36 @@ const app = createApp({
           extraStyle: extraStyle.value,
           ts: Date.now()
         };
-        localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
-        if (currentUser.value && window.fbHelper) {
-          window.fbHelper.saveEmailToDb(currentUser.value.uid, payload, 'autosave');
-        }
-        console.log('[MailArchitect] Progress auto-saved');
-      } catch (e) { console.warn('Save failed:', e); }
+        window.fbHelper.saveEmailToDb(currentUser.value.uid, payload, 'autosave');
+        console.log('[MailArchitect] Progress saved to cloud');
+      } catch (e) { console.warn('Cloud save failed:', e); }
     }
-    function scheduleSave() { if (saveTimer) clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 1000); }
+
+    function scheduleLocalSave() {
+      if (localSaveTimer) clearTimeout(localSaveTimer);
+      localSaveTimer = setTimeout(saveNowLocal, 1000);
+      
+      if (currentUser.value) {
+        if (!cloudSavePending.value) {
+          cloudSavePending.value = true;
+          cloudSaveCountdown.value = 10;
+          if (cloudInterval) clearInterval(cloudInterval);
+          cloudInterval = setInterval(() => {
+            cloudSaveCountdown.value--;
+            if (cloudSaveCountdown.value <= 0) saveNowCloud();
+          }, 1000);
+        } else {
+          cloudSaveCountdown.value = 10;
+        }
+      }
+    }
+
+    function forceCloudSave() {
+      if (cloudSavePending.value) saveNowCloud();
+    }
 
     // More robust watch for deep mutations
-    watch(() => [tree.value, classes.value], scheduleSave, { deep: true });
+    watch(() => [tree.value, classes.value], scheduleLocalSave, { deep: true });
     watch(() => [tree.value, classes.value], scheduleUndoPush, { deep: true });
 
 
@@ -1707,10 +1752,12 @@ const app = createApp({
         ensureStyleRefs(savedStateCache.tree);
         tree.value = savedStateCache.tree;
         if (savedStateCache.classes) classes.value = savedStateCache.classes;
-        undoStack.value = [];
-        redoStack.value = [];
-        pushUndoState();
-
+        if (savedStateCache.undoStack) undoStack.value = savedStateCache.undoStack;
+        if (savedStateCache.redoStack) redoStack.value = savedStateCache.redoStack;
+        
+        if (!savedStateCache.undoStack || savedStateCache.undoStack.length === 0) {
+          pushUndoState();
+        }
       }
       welcomeOpen.value = false;
       toast('Restored previous session', true);
@@ -1806,12 +1853,14 @@ const app = createApp({
             typeDefaults.value = saved.typeDefaults || {};
             globalFonts.value = saved.globalFonts || [];
             extraStyle.value = saved.extraStyle || '';
+            if (saved.undoStack) undoStack.value = saved.undoStack;
+            if (saved.redoStack) redoStack.value = saved.redoStack;
             savedStateCache = saved;
           }
         }
       } catch { }
 
-      window.addEventListener('beforeunload', saveNow);
+      window.addEventListener('beforeunload', saveNowLocal);
 
       setTimeout(renderPreview, 900);
     });
@@ -1864,9 +1913,10 @@ const app = createApp({
       getPropValue, setPropValue, getPropNumeric, setPropNumeric,
       getActiveTheme, setActiveTheme,
       PROP_DEFS, PROP_CATEGORIES,
-      currentUser, login, logout, templatesOpen, myTemplates, saveTemplateToDb, loadTemplateFromDb,
+      currentUser, login, logout, templatesOpen, snippetsOpen, myTemplates, saveTemplateToDb, loadTemplateFromDb,
       deleteTemplate, renameTemplate,
-      mySnippets, saveSnippet, addSnippetFromPopup, deleteSnippetItem, renameSnippetItem
+      mySnippets, saveSnippet, addSnippetFromPopup, deleteSnippetItem, renameSnippetItem,
+      cloudSavePending, cloudSaveCountdown, forceCloudSave
     };
   }
 }).directive('click-outside', {

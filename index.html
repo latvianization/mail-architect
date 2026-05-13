@@ -64,7 +64,17 @@
         <button class="tool-btn" @click="login"><i class="fa-brands fa-google me-1"></i> Login</button>
       </div>
       <div class="tool-group" v-else>
+        <div class="cloud-sync-status" :class="{pending: cloudSavePending}" @click="forceCloudSave" :title="cloudSavePending ? 'Click to save now' : 'All changes saved to cloud'">
+           <template v-if="cloudSavePending">
+             <i class="fa-solid fa-spinner fa-spin me-2"></i> Sync in {{cloudSaveCountdown}}s
+           </template>
+           <template v-else>
+             <i class="fa-solid fa-cloud-check text-success me-2"></i> Synced
+           </template>
+        </div>
+        <div class="vd"></div>
         <button class="tool-btn" @click="templatesOpen=true" title="My Templates"><i class="fa-solid fa-folder-open"></i></button>
+        <button class="tool-btn" @click="snippetsOpen=true" title="My Snippets"><i class="fa-solid fa-bookmark"></i></button>
         <button class="tool-btn" @click="saveTemplateToDb" title="Save to Database"><i class="fa-solid fa-cloud-arrow-up"></i></button>
         <div class="vd"></div>
         <button class="tool-btn" @click="logout" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></button>
@@ -546,6 +556,33 @@
     </div>
   </div>
 
+  <!-- ── My Snippets Modal ────────────────────────────────────── -->
+  <div class="modal-overlay" v-if="snippetsOpen" @click.self="snippetsOpen=false">
+    <div class="modal-box">
+      <div class="modal-hdr">
+        <div class="modal-hdr-title"><i class="fa-solid fa-bookmark" style="color:#6366f1"></i> My Saved Snippets</div>
+      </div>
+      <div class="p-3" style="max-height: 400px; overflow-y: auto;">
+        <div v-if="mySnippets.length === 0" class="text-center text-muted p-4">No snippets saved yet.</div>
+        <div v-else class="list-group">
+          <div v-for="snip in mySnippets" :key="snip.id" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+            <div>
+              <strong>{{ snip.name || 'Untitled' }}</strong>
+              <div style="font-size: 11px; color: #64748b;">Saved: {{ snip.updatedAt ? new Date(snip.updatedAt.seconds*1000).toLocaleString() : 'Just now' }}</div>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+              <i class="fa-solid fa-pen text-muted" style="cursor:pointer" @click.stop="renameSnippetItem(snip)" title="Rename"></i>
+              <i class="fa-solid fa-trash text-danger" style="cursor:pointer" @click.stop="deleteSnippetItem(snip)" title="Delete"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-ftr">
+        <button class="btn-outline-sm ms-auto" @click="snippetsOpen=false">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Add Block Popup ──────────────────────────────────────── -->
   <div class="modal-overlay" v-if="addBlockPop.show" @click.self="closeAddBlock">
     <div class="add-block-box">
@@ -582,10 +619,6 @@
                  @click="addSnippetFromPopup(snip)">
               <div class="add-block-item-icon"><i class="fa-solid fa-bookmark"></i></div>
               <div class="add-block-item-name">{{snip.name}}</div>
-              <div class="ms-auto d-flex gap-3 px-2" v-if="addBlockPop.hoveredType === 'snippet_' + snip.id">
-                <i class="fa-solid fa-pen text-muted" @click.stop="renameSnippetItem(snip)" title="Rename"></i>
-                <i class="fa-solid fa-trash text-danger" @click.stop="deleteSnippetItem(snip)" title="Delete"></i>
-              </div>
             </div>
             <div v-if="!popupAllowedSnippets.length" class="p-4 text-center text-muted" style="font-size:12px">
               No snippets can be added here.

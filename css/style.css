@@ -37,6 +37,20 @@ body{
   padding:1px 8px;border-radius:5px;text-transform:uppercase;
 }
 
+.cloud-sync-status {
+  font-size: 12px; font-weight: 700; color: #94a3b8;
+  padding: 6px 12px; border-radius: 8px;
+  display: flex; align-items: center; transition: all 0.2s;
+  cursor: default; user-select: none;
+}
+.cloud-sync-status.pending {
+  color: #6366f1; background: #f5f3ff; border: 1px solid #ddd6fe;
+  cursor: pointer;
+}
+.cloud-sync-status.pending:hover {
+  background: #ede9fe; border-color: #6366f1;
+}
+
 /* ── Toolbar controls ─────────────────────────────────────────── */
 .tool-group{
   display:flex;background:#f1f5f9;border:1px solid #e2e8f0;
