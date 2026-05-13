@@ -57,6 +57,22 @@ const fbHelper = {
       return [];
     }
   },
+  async deleteEmail(uid, emailId) {
+    if (!db) return;
+    try {
+      await db.collection("users").doc(uid).collection("emails").doc(emailId).delete();
+    } catch (e) {
+      console.error("Error deleting email", e);
+    }
+  },
+  async renameEmail(uid, emailId, newName) {
+    if (!db) return;
+    try {
+      await db.collection("users").doc(uid).collection("emails").doc(emailId).update({ name: newName });
+    } catch (e) {
+      console.error("Error renaming email", e);
+    }
+  },
   async saveSnippetToDb(uid, snippetName, snippetData) {
     if (!db) return;
     try {
@@ -77,6 +93,22 @@ const fbHelper = {
     } catch (e) {
       console.error("Error loading user snippets", e);
       return [];
+    }
+  },
+  async deleteSnippet(uid, snippetId) {
+    if (!db) return;
+    try {
+      await db.collection("users").doc(uid).collection("snippets").doc(snippetId).delete();
+    } catch (e) {
+      console.error("Error deleting snippet", e);
+    }
+  },
+  async renameSnippet(uid, snippetId, newName) {
+    if (!db) return;
+    try {
+      await db.collection("users").doc(uid).collection("snippets").doc(snippetId).update({ name: newName });
+    } catch (e) {
+      console.error("Error renaming snippet", e);
     }
   }
 };

@@ -60,6 +60,22 @@ const app = createApp({
       scheduleRender();
     }
 
+    async function deleteTemplate(t) {
+      if (!currentUser.value || !confirm(`Delete template "${t.name}"?`)) return;
+      await window.fbHelper.deleteEmail(currentUser.value.uid, t.id);
+      toast('Template deleted');
+      myTemplates.value = await window.fbHelper.loadUserEmails(currentUser.value.uid);
+    }
+
+    async function renameTemplate(t) {
+      if (!currentUser.value) return;
+      const newName = prompt("Enter new name for template:", t.name);
+      if (!newName || newName === t.name) return;
+      await window.fbHelper.renameEmail(currentUser.value.uid, t.id, newName);
+      toast('Template renamed');
+      myTemplates.value = await window.fbHelper.loadUserEmails(currentUser.value.uid);
+    }
+
     async function saveSnippet(node) {
       if (!currentUser.value) return;
       const name = prompt("Enter a name for this snippet:", node.name || node.type);
@@ -81,6 +97,22 @@ const app = createApp({
         scheduleRender();
       }
       closeAddBlock();
+    }
+
+    async function deleteSnippetItem(snip) {
+      if (!currentUser.value || !confirm(`Delete snippet "${snip.name}"?`)) return;
+      await window.fbHelper.deleteSnippet(currentUser.value.uid, snip.id);
+      toast('Snippet deleted');
+      mySnippets.value = await window.fbHelper.loadUserSnippets(currentUser.value.uid);
+    }
+
+    async function renameSnippetItem(snip) {
+      if (!currentUser.value) return;
+      const newName = prompt("Enter new name for snippet:", snip.name);
+      if (!newName || newName === snip.name) return;
+      await window.fbHelper.renameSnippet(currentUser.value.uid, snip.id, newName);
+      toast('Snippet renamed');
+      mySnippets.value = await window.fbHelper.loadUserSnippets(currentUser.value.uid);
     }
 
     const deviceWidth = ref('100%');
@@ -166,9 +198,10 @@ const app = createApp({
       previewTimer = setTimeout(() => {
         try {
           let node;
-          if (addBlockPop.tab === 'templates') {
-            const tmpl = templateLib.find(t => t.type === newType);
-            if (tmpl) node = tmpl.build();
+          if (addBlockPop.tab === 'snippets' && newType.startsWith('snippet_')) {
+            const id = newType.replace('snippet_', '');
+            const snip = mySnippets.value.find(s => s.id === id);
+            if (snip) node = deepCloneNode(snip.data);
           } else {
             node = makeNode(newType);
           }
@@ -399,19 +432,30 @@ const app = createApp({
 
     const popupAllowedTypes = computed(() => {
       if (!addBlockPop.parentType) return [];
-      if (addBlockPop.tab === 'templates') {
-        // Only show templates if the parent is a body or wrapper/hero (usually sections)
-        // or just show all for now, but pre-filter standard ones
-        const isBody = addBlockPop.parentType === 'mj-body' || addBlockPop.parentType === 'mj-wrapper';
-        return isBody ? templateLib : [];
-      }
       const allowed = allowedChildrenMap[addBlockPop.parentType] || [];
       return allowed.map(t => compLib.find(c => c.type === t)).filter(Boolean);
     });
 
+    const popupAllowedSnippets = computed(() => {
+      if (!addBlockPop.parentType) return [];
+      const allowed = allowedChildrenMap[addBlockPop.parentType] || [];
+      return mySnippets.value.filter(snip => allowed.includes(snip.data.type));
+    });
+
     const popupHoveredDetail = computed(() => {
       if (!addBlockPop.hoveredType) return null;
-      if (addBlockPop.tab === 'templates') return templateLib.find(t => t.type === addBlockPop.hoveredType);
+      if (addBlockPop.tab === 'snippets' && addBlockPop.hoveredType.startsWith('snippet_')) {
+        const id = addBlockPop.hoveredType.replace('snippet_', '');
+        const snip = mySnippets.value.find(s => s.id === id);
+        if (snip) {
+          return {
+            name: snip.name,
+            desc: 'A custom saved snippet.',
+            icon: 'fa-solid fa-bookmark',
+            _snip: snip
+          };
+        }
+      }
       return compLib.find(c => c.type === addBlockPop.hoveredType);
     });
 
@@ -1805,7 +1849,7 @@ const app = createApp({
       showAdvanced, showAdvancedInline, openCatsMap, toggleCategory, isCategoryOpen,
 
       addBlockPop, openAddBlock, closeAddBlock, addBlockFromPopup, addTemplateFromPopup, duplicateNode,
-      popupAllowedTypes, popupHoveredDetail, hoveredPreviewHtml,
+      popupAllowedTypes, popupHoveredDetail, hoveredPreviewHtml, popupAllowedSnippets,
 
 
 
@@ -1821,7 +1865,8 @@ const app = createApp({
       getActiveTheme, setActiveTheme,
       PROP_DEFS, PROP_CATEGORIES,
       currentUser, login, logout, templatesOpen, myTemplates, saveTemplateToDb, loadTemplateFromDb,
-      mySnippets, saveSnippet, addSnippetFromPopup
+      deleteTemplate, renameTemplate,
+      mySnippets, saveSnippet, addSnippetFromPopup, deleteSnippetItem, renameSnippetItem
     };
   }
 }).directive('click-outside', {

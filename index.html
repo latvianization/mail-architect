@@ -533,7 +533,10 @@
               <strong>{{ t.name || 'Untitled' }}</strong>
               <div style="font-size: 11px; color: #64748b;">Saved: {{ t.updatedAt ? new Date(t.updatedAt.seconds*1000).toLocaleString() : 'Just now' }}</div>
             </div>
-            <i class="fa-solid fa-chevron-right text-muted"></i>
+            <div class="d-flex align-items-center gap-3">
+              <i class="fa-solid fa-pen text-muted" style="cursor:pointer" @click.stop="renameTemplate(t)" title="Rename"></i>
+              <i class="fa-solid fa-trash text-danger" style="cursor:pointer" @click.stop="deleteTemplate(t)" title="Delete"></i>
+            </div>
           </button>
         </div>
       </div>
@@ -555,33 +558,37 @@
           <!-- Tabs -->
           <div class="add-block-tabs mt-3">
             <button class="add-block-tab" :class="{active: addBlockPop.tab==='blocks'}" @click="addBlockPop.tab='blocks'">Components</button>
-            <button class="add-block-tab" :class="{active: addBlockPop.tab==='templates'}" @click="addBlockPop.tab='templates'">Templates</button>
             <button class="add-block-tab" v-if="currentUser" :class="{active: addBlockPop.tab==='snippets'}" @click="addBlockPop.tab='snippets'">Snippets</button>
           </div>
         </div>
         <div class="add-block-list-scroll">
-          <div class="add-block-cat-label">{{addBlockPop.tab==='blocks' ? 'Base Components' : (addBlockPop.tab==='templates' ? 'Pre-built Layouts' : 'My Snippets')}}</div>
-          <div v-if="addBlockPop.tab !== 'snippets'">
+          <div class="add-block-cat-label">{{addBlockPop.tab==='blocks' ? 'Base Components' : 'My Snippets'}}</div>
+          <div v-if="addBlockPop.tab === 'blocks'">
             <div v-for="comp in popupAllowedTypes" :key="comp.type" 
                  class="add-block-item" :class="{active: addBlockPop.hoveredType === comp.type}"
                  @mouseenter="addBlockPop.hoveredType = comp.type"
-                 @click="addBlockPop.tab==='blocks' ? addBlockFromPopup(comp.type) : addTemplateFromPopup(comp.type)">
+                 @click="addBlockFromPopup(comp.type)">
               <div class="add-block-item-icon"><i :class="comp.icon"></i></div>
               <div class="add-block-item-name">{{comp.name}}</div>
             </div>
             <div v-if="!popupAllowedTypes.length" class="p-4 text-center text-muted" style="font-size:12px">
-              {{addBlockPop.tab==='templates' ? 'Templates are only available for Body/Wrapper' : 'No components can be added here.'}}
+              No components can be added here.
             </div>
           </div>
           <div v-else>
-            <div v-for="snip in mySnippets" :key="snip.id"
-                 class="add-block-item"
+            <div v-for="snip in popupAllowedSnippets" :key="snip.id"
+                 class="add-block-item" :class="{active: addBlockPop.hoveredType === 'snippet_' + snip.id}"
+                 @mouseenter="addBlockPop.hoveredType = 'snippet_' + snip.id"
                  @click="addSnippetFromPopup(snip)">
               <div class="add-block-item-icon"><i class="fa-solid fa-bookmark"></i></div>
               <div class="add-block-item-name">{{snip.name}}</div>
+              <div class="ms-auto d-flex gap-3 px-2" v-if="addBlockPop.hoveredType === 'snippet_' + snip.id">
+                <i class="fa-solid fa-pen text-muted" @click.stop="renameSnippetItem(snip)" title="Rename"></i>
+                <i class="fa-solid fa-trash text-danger" @click.stop="deleteSnippetItem(snip)" title="Delete"></i>
+              </div>
             </div>
-            <div v-if="!mySnippets.length" class="p-4 text-center text-muted" style="font-size:12px">
-              No snippets saved yet.
+            <div v-if="!popupAllowedSnippets.length" class="p-4 text-center text-muted" style="font-size:12px">
+              No snippets can be added here.
             </div>
           </div>
         </div>
@@ -594,7 +601,7 @@
           <div class="detail-icon-big"><i :class="popupHoveredDetail.icon"></i></div>
           <h2 class="detail-title">{{popupHoveredDetail.name}}</h2>
           <p class="detail-desc">{{popupHoveredDetail.desc}}</p>
-          <button class="detail-btn-add" @click="addBlockPop.tab==='blocks' ? addBlockFromPopup(popupHoveredDetail.type) : addTemplateFromPopup(popupHoveredDetail.type)">
+          <button class="detail-btn-add" @click="addBlockPop.tab==='blocks' ? addBlockFromPopup(popupHoveredDetail.type) : addSnippetFromPopup(popupHoveredDetail._snip)">
             <i class="fa-solid fa-plus me-2"></i> Add {{popupHoveredDetail.name}}
           </button>
           
