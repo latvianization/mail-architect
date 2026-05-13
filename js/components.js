@@ -23,6 +23,7 @@ const TreeNodeComp = {
         <span class="tree-node-type">{{node.type.replace('mj-','')}}</span>
 
         <div class="node-classes">
+          <span class="class-badge-mini" style="background-color: #6366f1; color: white;" v-if="node.name" :title="node.name">{{node.name}}</span>
           <span class="class-badge-mini" v-for="c in (node.classes||[]).slice(0,3)" :key="'g-'+c" :title="c">.{{c}}</span>
         </div>
         <button v-if="node.children!==undefined" class="tree-node-add" @click.stop="$emit('add', {id:node.id, type:node.type})">

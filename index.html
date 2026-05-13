@@ -283,6 +283,12 @@
             </div>
           </div>
 
+          <!-- Component Name Section -->
+          <div class="inspector-section" v-if="tab==='node' && selectedNode">
+            <div class="inspector-section-label">Name</div>
+            <input class="field-input py-1" v-model="selectedNode.name" placeholder="Component Name...">
+          </div>
+
           <!-- Component Attributes Section -->
           <div class="inspector-section" v-if="tab==='node' && selectedNode">
             <div class="inspector-section-label"><i class="fa-solid fa-wand-magic-sparkles"></i> Component Attributes</div>

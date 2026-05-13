@@ -10,6 +10,7 @@ function makeNode(type, withScaffold = false) {
 
   const node = {
     id: uid(), type,
+    name: '',
     classes,
     customClasses: [],
     attrs: {},
@@ -99,6 +100,10 @@ function buildAttrs(node, globalProps = {}, typeDefaults = {}, options = {}) {
 
   if (includeInternalIds && !previewMode) {
     s += ` id="mja-${node.id}"`;
+  }
+
+  if (node.name) {
+    s += ` name="${String(node.name).replace(/"/g, '&quot;')}"`;
   }
 
   if (!noRawStyleTags.has(node.type)) {
@@ -409,9 +414,10 @@ function parseMjmlToTree(src) {
     const cls = (el.getAttribute('mj-class') || '').split(' ').filter(Boolean);
     const cssCls = (el.getAttribute('css-class') || el.getAttribute('class') || '').split(' ').filter(c => c && !c.startsWith('mja-'));
     cssCls.forEach(c => { if (!cls.includes(c)) cls.push(c); });
+    const nameAttr = el.getAttribute('name') || '';
     const attrs = {};
     for (const a of el.attributes) {
-      if (a.name !== 'mj-class' && a.name !== 'css-class' && a.name !== 'id') attrs[a.name] = a.value;
+      if (a.name !== 'mj-class' && a.name !== 'css-class' && a.name !== 'id' && a.name !== 'name') attrs[a.name] = a.value;
     }
 
     let content = '', children = undefined;
@@ -450,7 +456,7 @@ function parseMjmlToTree(src) {
 
     if (mjStyleLookup[id]) Object.assign(style, mjStyleLookup[id]);
 
-    return { id, type, classes: cls, attrs, style, content, children };
+    return { id, type, name: nameAttr, classes: cls, attrs, style, content, children };
   }
 
   const mjmlEl = doc.querySelector('mjml');
@@ -463,17 +469,17 @@ function parseMjmlToTree(src) {
     rootNode = parseEl(mjmlEl);
     // Ensure mjml node has mj-head and mj-body if missing
     if (!rootNode.children.some(c => c.type === 'mj-head')) {
-      rootNode.children.unshift({ id: uid(), type: 'mj-head', classes: [], attrs: {}, style: {}, content: '', children: [] });
+      rootNode.children.unshift({ id: uid(), type: 'mj-head', name: '', classes: [], attrs: {}, style: {}, content: '', children: [] });
     }
     if (!rootNode.children.some(c => c.type === 'mj-body')) {
-      rootNode.children.push({ id: uid(), type: 'mj-body', classes: [], attrs: {}, style: {}, content: '', children: [] });
+      rootNode.children.push({ id: uid(), type: 'mj-body', name: '', classes: [], attrs: {}, style: {}, content: '', children: [] });
     }
   } else {
     // Wrap stand-alone body in mjml/mj-head/mj-body structure
     rootNode = {
-      id: uid(), type: 'mjml', classes: [], attrs: {}, style: {}, content: '',
+      id: uid(), type: 'mjml', name: '', classes: [], attrs: {}, style: {}, content: '',
       children: [
-        { id: uid(), type: 'mj-head', classes: [], attrs: {}, style: {}, content: '', children: [] },
+        { id: uid(), type: 'mj-head', name: '', classes: [], attrs: {}, style: {}, content: '', children: [] },
         parseEl(bodyEl)
       ]
     };
