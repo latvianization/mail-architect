@@ -3,6 +3,86 @@ const { createApp, ref, reactive, computed, watch, onMounted, nextTick } = Vue;
 const app = createApp({
   components: { 'tree-node': TreeNodeComp, 'visual-editor': VisualEditorComp, 'draggable': window.vuedraggable },
   setup() {
+    const currentUser = ref(null);
+    const myTemplates = ref([]);
+    const mySnippets = ref([]);
+    const templatesOpen = ref(false);
+
+    if (window.fbHelper) {
+      window.fbHelper.onAuthStateChanged(async (user) => {
+        currentUser.value = user;
+        if (user) {
+          mySnippets.value = await window.fbHelper.loadUserSnippets(user.uid);
+          myTemplates.value = await window.fbHelper.loadUserEmails(user.uid);
+        } else {
+          mySnippets.value = [];
+          myTemplates.value = [];
+        }
+      });
+    }
+
+    function login() {
+      if (window.fbHelper) window.fbHelper.signIn().catch(e => toast('Login failed: ' + e.message, false));
+    }
+
+    function logout() {
+      if (window.fbHelper) window.fbHelper.signOut().catch(e => toast('Logout failed', false));
+    }
+
+    async function saveTemplateToDb() {
+      if (!currentUser.value) return;
+      const name = prompt("Enter a name for this template:");
+      if (!name) return;
+      const data = {
+        name,
+        tree: JSON.parse(JSON.stringify(tree.value)),
+        classes: JSON.parse(JSON.stringify(classes.value)),
+        globalProps: JSON.parse(JSON.stringify(globalProps.value)),
+        typeDefaults: JSON.parse(JSON.stringify(typeDefaults.value)),
+        globalFonts: JSON.parse(JSON.stringify(globalFonts.value)),
+        extraStyle: extraStyle.value,
+      };
+      await window.fbHelper.saveEmailToDb(currentUser.value.uid, data, Date.now().toString());
+      toast('Template saved to Database!');
+      myTemplates.value = await window.fbHelper.loadUserEmails(currentUser.value.uid);
+    }
+
+    function loadTemplateFromDb(t) {
+      if (!confirm("Load template? Unsaved changes will be lost.")) return;
+      tree.value = t.tree;
+      classes.value = t.classes || [];
+      globalProps.value = t.globalProps || {};
+      typeDefaults.value = t.typeDefaults || {};
+      globalFonts.value = t.globalFonts || [];
+      extraStyle.value = t.extraStyle || '';
+      templatesOpen.value = false;
+      toast('Template loaded from Database!');
+      scheduleRender();
+    }
+
+    async function saveSnippet(node) {
+      if (!currentUser.value) return;
+      const name = prompt("Enter a name for this snippet:", node.name || node.type);
+      if (!name) return;
+      await window.fbHelper.saveSnippetToDb(currentUser.value.uid, name, JSON.parse(JSON.stringify(node)));
+      toast('Snippet saved!');
+      mySnippets.value = await window.fbHelper.loadUserSnippets(currentUser.value.uid);
+    }
+
+    function addSnippetFromPopup(snip) {
+      if (!addBlockPop.parentId) return;
+      const parent = findNode(tree.value, addBlockPop.parentId);
+      if (parent) {
+        if (!parent.children) parent.children = [];
+        const newNode = deepCloneNode(snip.data);
+        parent.children.push(newNode);
+        selectNode(newNode.id);
+        toast(`Added snippet: ${snip.name}`);
+        scheduleRender();
+      }
+      closeAddBlock();
+    }
+
     const deviceWidth = ref('100%');
     const deviceLabel = computed(() => ({ '100%': 'Desktop', '768px': 'Tablet 768px', '414px': 'Mobile L 414px', '375px': 'Mobile S 375px' }[deviceWidth.value] || deviceWidth.value));
     const previewTheme = ref('light');
@@ -1547,7 +1627,7 @@ const app = createApp({
     function saveNow() {
       if (welcomeOpen.value) return;
       try {
-        localStorage.setItem(SAVE_KEY, JSON.stringify({
+        const payload = {
           tree: tree.value,
           classes: classes.value,
           globalProps: globalProps.value,
@@ -1555,7 +1635,11 @@ const app = createApp({
           globalFonts: globalFonts.value,
           extraStyle: extraStyle.value,
           ts: Date.now()
-        }));
+        };
+        localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
+        if (currentUser.value && window.fbHelper) {
+          window.fbHelper.saveEmailToDb(currentUser.value.uid, payload, 'autosave');
+        }
         console.log('[MailArchitect] Progress auto-saved');
       } catch (e) { console.warn('Save failed:', e); }
     }
@@ -1735,7 +1819,9 @@ const app = createApp({
       },
       getPropValue, setPropValue, getPropNumeric, setPropNumeric,
       getActiveTheme, setActiveTheme,
-      PROP_DEFS, PROP_CATEGORIES
+      PROP_DEFS, PROP_CATEGORIES,
+      currentUser, login, logout, templatesOpen, myTemplates, saveTemplateToDb, loadTemplateFromDb,
+      mySnippets, saveSnippet, addSnippetFromPopup
     };
   }
 }).directive('click-outside', {

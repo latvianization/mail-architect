@@ -18,6 +18,10 @@
   <script src="https://cdn.jsdelivr.net/npm/vuedraggable@4.1.0/dist/vuedraggable.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mjml-browser@4.14.1/lib/index.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.15.1/beautify-html.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics-compat.js"></script>
 </head>
 <body>
 <div id="app" v-cloak>
@@ -51,6 +55,19 @@
       <div class="tool-group">
         <button class="tool-btn" :class="{active:viewMode==='builder'}" @click="viewMode='builder'"><i class="fa-solid fa-layer-group me-1"></i>Design</button>
         <button class="tool-btn" :class="{active:viewMode==='code'}" @click="viewMode='code'"><i class="fa-solid fa-code me-1"></i>Code</button>
+      </div>
+
+      <div class="vd"></div>
+
+      <!-- Auth & Templates -->
+      <div class="tool-group" v-if="!currentUser">
+        <button class="tool-btn" @click="login"><i class="fa-brands fa-google me-1"></i> Login</button>
+      </div>
+      <div class="tool-group" v-else>
+        <button class="tool-btn" @click="templatesOpen=true" title="My Templates"><i class="fa-solid fa-folder-open"></i></button>
+        <button class="tool-btn" @click="saveTemplateToDb" title="Save to Database"><i class="fa-solid fa-cloud-arrow-up"></i></button>
+        <div class="vd"></div>
+        <button class="tool-btn" @click="logout" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></button>
       </div>
 
       <div class="vd"></div>
@@ -502,6 +519,30 @@
 
   <div class="toast-msg" :class="{show:toastShow, ok:toastSuccess}">{{toastMsg}}</div>
 
+  <!-- ── My Templates Modal ────────────────────────────────────── -->
+  <div class="modal-overlay" v-if="templatesOpen" @click.self="templatesOpen=false">
+    <div class="modal-box">
+      <div class="modal-hdr">
+        <div class="modal-hdr-title"><i class="fa-solid fa-folder-open" style="color:#6366f1"></i> My Saved Templates</div>
+      </div>
+      <div class="p-3" style="max-height: 400px; overflow-y: auto;">
+        <div v-if="myTemplates.length === 0" class="text-center text-muted p-4">No templates saved yet.</div>
+        <div v-else class="list-group">
+          <button v-for="t in myTemplates" :key="t.id" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" @click="loadTemplateFromDb(t)">
+            <div>
+              <strong>{{ t.name || 'Untitled' }}</strong>
+              <div style="font-size: 11px; color: #64748b;">Saved: {{ t.updatedAt ? new Date(t.updatedAt.seconds*1000).toLocaleString() : 'Just now' }}</div>
+            </div>
+            <i class="fa-solid fa-chevron-right text-muted"></i>
+          </button>
+        </div>
+      </div>
+      <div class="modal-ftr">
+        <button class="btn-outline-sm ms-auto" @click="templatesOpen=false">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Add Block Popup ──────────────────────────────────────── -->
   <div class="modal-overlay" v-if="addBlockPop.show" @click.self="closeAddBlock">
     <div class="add-block-box">
@@ -515,19 +556,33 @@
           <div class="add-block-tabs mt-3">
             <button class="add-block-tab" :class="{active: addBlockPop.tab==='blocks'}" @click="addBlockPop.tab='blocks'">Components</button>
             <button class="add-block-tab" :class="{active: addBlockPop.tab==='templates'}" @click="addBlockPop.tab='templates'">Templates</button>
+            <button class="add-block-tab" v-if="currentUser" :class="{active: addBlockPop.tab==='snippets'}" @click="addBlockPop.tab='snippets'">Snippets</button>
           </div>
         </div>
         <div class="add-block-list-scroll">
-          <div class="add-block-cat-label">{{addBlockPop.tab==='blocks' ? 'Base Components' : 'Pre-built Layouts'}}</div>
-          <div v-for="comp in popupAllowedTypes" :key="comp.type" 
-               class="add-block-item" :class="{active: addBlockPop.hoveredType === comp.type}"
-               @mouseenter="addBlockPop.hoveredType = comp.type"
-               @click="addBlockPop.tab==='blocks' ? addBlockFromPopup(comp.type) : addTemplateFromPopup(comp.type)">
-            <div class="add-block-item-icon"><i :class="comp.icon"></i></div>
-            <div class="add-block-item-name">{{comp.name}}</div>
+          <div class="add-block-cat-label">{{addBlockPop.tab==='blocks' ? 'Base Components' : (addBlockPop.tab==='templates' ? 'Pre-built Layouts' : 'My Snippets')}}</div>
+          <div v-if="addBlockPop.tab !== 'snippets'">
+            <div v-for="comp in popupAllowedTypes" :key="comp.type" 
+                 class="add-block-item" :class="{active: addBlockPop.hoveredType === comp.type}"
+                 @mouseenter="addBlockPop.hoveredType = comp.type"
+                 @click="addBlockPop.tab==='blocks' ? addBlockFromPopup(comp.type) : addTemplateFromPopup(comp.type)">
+              <div class="add-block-item-icon"><i :class="comp.icon"></i></div>
+              <div class="add-block-item-name">{{comp.name}}</div>
+            </div>
+            <div v-if="!popupAllowedTypes.length" class="p-4 text-center text-muted" style="font-size:12px">
+              {{addBlockPop.tab==='templates' ? 'Templates are only available for Body/Wrapper' : 'No components can be added here.'}}
+            </div>
           </div>
-          <div v-if="!popupAllowedTypes.length" class="p-4 text-center text-muted" style="font-size:12px">
-            {{addBlockPop.tab==='templates' ? 'Templates are only available for Body/Wrapper' : 'No components can be added here.'}}
+          <div v-else>
+            <div v-for="snip in mySnippets" :key="snip.id"
+                 class="add-block-item"
+                 @click="addSnippetFromPopup(snip)">
+              <div class="add-block-item-icon"><i class="fa-solid fa-bookmark"></i></div>
+              <div class="add-block-item-name">{{snip.name}}</div>
+            </div>
+            <div v-if="!mySnippets.length" class="p-4 text-center text-muted" style="font-size:12px">
+              No snippets saved yet.
+            </div>
           </div>
         </div>
 
@@ -564,6 +619,7 @@
 
 
 <script src="js/constants.js"></script>
+<script src="js/firebase-config.js"></script>
 <script src="js/utils.js"></script>
 <script src="js/components.js"></script>
 <script src="js/main.js"></script>

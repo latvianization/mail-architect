@@ -32,6 +32,9 @@ const TreeNodeComp = {
         <button class="tree-node-copy" @click.stop="$emit('duplicate', node.id)" title="Duplicate">
           <i class="fa-solid fa-copy"></i>
         </button>
+        <button v-if="$root.currentUser" class="tree-node-copy" @click.stop="$root.saveSnippet(node)" title="Save as Snippet">
+          <i class="fa-solid fa-bookmark"></i>
+        </button>
         <button class="tree-node-delete" @click.stop="$emit('delete',node)"><i class="fa-solid fa-xmark"></i></button>
       </div>
 
