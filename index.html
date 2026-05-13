@@ -75,7 +75,6 @@
         <div class="vd"></div>
         <button class="tool-btn" @click="templatesOpen=true" title="My Templates"><i class="fa-solid fa-folder-open"></i></button>
         <button class="tool-btn" @click="snippetsOpen=true" title="My Snippets"><i class="fa-solid fa-bookmark"></i></button>
-        <button class="tool-btn" @click="saveTemplateToDb" title="Save to Database"><i class="fa-solid fa-cloud-arrow-up"></i></button>
         <div class="vd"></div>
         <button class="tool-btn" @click="logout" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></button>
       </div>
@@ -538,14 +537,17 @@
       <div class="p-3" style="max-height: 400px; overflow-y: auto;">
         <div v-if="myTemplates.length === 0" class="text-center text-muted p-4">No templates saved yet.</div>
         <div v-else class="list-group">
-          <button v-for="t in myTemplates" :key="t.id" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" @click="loadTemplateFromDb(t)">
+          <button v-for="t in myTemplates" :key="t.id" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" @click="loadTemplateFromDb(t)" :class="{active: t.id === currentEmailId}">
             <div>
-              <strong>{{ t.name || 'Untitled' }}</strong>
-              <div style="font-size: 11px; color: #64748b;">Saved: {{ t.updatedAt ? new Date(t.updatedAt.seconds*1000).toLocaleString() : 'Just now' }}</div>
+              <div class="d-flex align-items-center gap-2">
+                <strong>{{ t.name || 'Untitled' }}</strong>
+                <span v-if="t.id === currentEmailId" class="badge bg-primary rounded-pill" style="font-size: 9px; font-weight: 800; padding: 3px 8px;">ACTIVE</span>
+              </div>
+              <div style="font-size: 11px; color: #64748b;" :style="{color: t.id === currentEmailId ? '#bfdbfe' : '#64748b'}">Saved: {{ t.updatedAt ? new Date(t.updatedAt.seconds*1000).toLocaleString() : 'Just now' }}</div>
             </div>
             <div class="d-flex align-items-center gap-3">
-              <i class="fa-solid fa-pen text-muted" style="cursor:pointer" @click.stop="renameTemplate(t)" title="Rename"></i>
-              <i class="fa-solid fa-trash text-danger" style="cursor:pointer" @click.stop="deleteTemplate(t)" title="Delete"></i>
+              <i class="fa-solid fa-pen" :class="t.id === currentEmailId ? 'text-white' : 'text-muted'" style="cursor:pointer" @click.stop="renameTemplate(t)" title="Rename"></i>
+              <i class="fa-solid fa-trash" :class="t.id === currentEmailId ? 'text-white' : 'text-danger'" style="cursor:pointer" @click.stop="deleteTemplate(t)" title="Delete"></i>
             </div>
           </button>
         </div>
@@ -557,28 +559,49 @@
   </div>
 
   <!-- ── My Snippets Modal ────────────────────────────────────── -->
-  <div class="modal-overlay" v-if="snippetsOpen" @click.self="snippetsOpen=false">
-    <div class="modal-box">
-      <div class="modal-hdr">
-        <div class="modal-hdr-title"><i class="fa-solid fa-bookmark" style="color:#6366f1"></i> My Saved Snippets</div>
-      </div>
-      <div class="p-3" style="max-height: 400px; overflow-y: auto;">
-        <div v-if="mySnippets.length === 0" class="text-center text-muted p-4">No snippets saved yet.</div>
-        <div v-else class="list-group">
-          <div v-for="snip in mySnippets" :key="snip.id" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-            <div>
-              <strong>{{ snip.name || 'Untitled' }}</strong>
-              <div style="font-size: 11px; color: #64748b;">Saved: {{ snip.updatedAt ? new Date(snip.updatedAt.seconds*1000).toLocaleString() : 'Just now' }}</div>
-            </div>
-            <div class="d-flex align-items-center gap-3">
-              <i class="fa-solid fa-pen text-muted" style="cursor:pointer" @click.stop="renameSnippetItem(snip)" title="Rename"></i>
-              <i class="fa-solid fa-trash text-danger" style="cursor:pointer" @click.stop="deleteSnippetItem(snip)" title="Delete"></i>
+  <div class="modal-overlay" v-if="snippetsOpen" @click.self="snippetsOpen=false; hoveredSnippet=null">
+    <div class="add-block-box">
+      <div class="add-block-list-side">
+        <div class="add-block-list-hdr">
+          <div class="add-block-list-title">My Saved Snippets</div>
+          <div class="add-block-list-sub">Manage and preview your snippets</div>
+        </div>
+        <div class="add-block-list-scroll">
+          <div v-if="mySnippets.length === 0" class="text-center text-muted p-4">No snippets saved yet.</div>
+          <div v-for="snip in mySnippets" :key="snip.id" 
+               class="add-block-item" :class="{active: hoveredSnippet && hoveredSnippet.id === snip.id}"
+               @mouseenter="hoveredSnippet = snip">
+            <div class="add-block-item-icon"><i class="fa-solid fa-bookmark"></i></div>
+            <div class="add-block-item-name">{{snip.name}}</div>
+            <div class="ms-auto d-flex gap-3 px-2">
+              <i class="fa-solid fa-pen text-muted" @click.stop="renameSnippetItem(snip)" title="Rename"></i>
+              <i class="fa-solid fa-trash text-danger" @click.stop="deleteSnippetItem(snip)" title="Delete"></i>
             </div>
           </div>
         </div>
+        <div class="p-3 border-top bg-light">
+          <button class="btn-outline-sm w-100 justify-content-center" @click="snippetsOpen=false; hoveredSnippet=null">Close</button>
+        </div>
       </div>
-      <div class="modal-ftr">
-        <button class="btn-outline-sm ms-auto" @click="snippetsOpen=false">Close</button>
+      
+      <div class="add-block-detail-side">
+        <template v-if="hoveredSnippet">
+          <div class="detail-icon-big"><i class="fa-solid fa-bookmark"></i></div>
+          <h2 class="detail-title">{{hoveredSnippet.name}}</h2>
+          <p class="detail-desc">Preview of your custom saved snippet.</p>
+          
+          <div class="gallery-preview-wrap">
+            <div class="gallery-preview-lbl">Snippet Preview</div>
+            <div class="gallery-preview-frame-wrap">
+              <iframe class="gallery-preview-frame" :srcdoc="hoveredPreviewHtml"></iframe>
+            </div>
+          </div>
+        </template>
+        <template v-else>
+          <div class="detail-icon-big" style="opacity: 0.1;"><i class="fa-solid fa-bookmark"></i></div>
+          <h2 class="detail-title" style="opacity: 0.2;">Preview Snippet</h2>
+          <p class="detail-desc" style="opacity: 0.3;">Hover over a snippet to see a visual preview here.</p>
+        </template>
       </div>
     </div>
   </div>

@@ -8,6 +8,8 @@ const app = createApp({
     const mySnippets = ref([]);
     const templatesOpen = ref(false);
     const snippetsOpen = ref(false);
+    const currentEmailId = ref(null);
+    const hoveredSnippet = ref(null);
 
     if (window.fbHelper) {
       window.fbHelper.onAuthStateChanged(async (user) => {
@@ -56,6 +58,7 @@ const app = createApp({
       typeDefaults.value = t.typeDefaults || {};
       globalFonts.value = t.globalFonts || [];
       extraStyle.value = t.extraStyle || '';
+      currentEmailId.value = t.id;
       templatesOpen.value = false;
       toast('Template loaded from Database!');
       scheduleRender();
@@ -218,6 +221,20 @@ const app = createApp({
           hoveredPreviewHtml.value = '';
         }
       }, 100);
+    });
+
+    watch(hoveredSnippet, (snip) => {
+      if (!snip) { hoveredPreviewHtml.value = ''; return; }
+      try {
+        const node = deepCloneNode(snip.data);
+        const mjml = getPreviewMjml(node);
+        const fn = getMjml2Html();
+        const r = fn(mjml, { validationLevel: 'skip' });
+        hoveredPreviewHtml.value = r.html;
+      } catch (e) { 
+        console.error('Snippet preview error:', e);
+        hoveredPreviewHtml.value = ''; 
+      }
     });
 
     const SAVE_KEY = 'mailarchitect_v1';
@@ -1791,6 +1808,7 @@ const app = createApp({
       try { localStorage.removeItem(SAVE_KEY); } catch { }
       hasSavedEmail.value = false;
       savedStateCache = null;
+      currentEmailId.value = null;
       confirmNewOpen.value = false;
       welcomeOpen.value = false;
       toast('Started new email');
@@ -1913,10 +1931,10 @@ const app = createApp({
       getPropValue, setPropValue, getPropNumeric, setPropNumeric,
       getActiveTheme, setActiveTheme,
       PROP_DEFS, PROP_CATEGORIES,
-      currentUser, login, logout, templatesOpen, snippetsOpen, myTemplates, saveTemplateToDb, loadTemplateFromDb,
+      currentUser, login, logout, templatesOpen, snippetsOpen, currentEmailId, myTemplates, saveTemplateToDb, loadTemplateFromDb,
       deleteTemplate, renameTemplate,
       mySnippets, saveSnippet, addSnippetFromPopup, deleteSnippetItem, renameSnippetItem,
-      cloudSavePending, cloudSaveCountdown, forceCloudSave
+      cloudSavePending, cloudSaveCountdown, forceCloudSave, hoveredSnippet
     };
   }
 }).directive('click-outside', {
