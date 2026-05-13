@@ -64,17 +64,21 @@
         <button class="tool-btn" @click="login"><i class="fa-brands fa-google me-1"></i> Login</button>
       </div>
       <div class="tool-group" v-else>
-        <div class="cloud-sync-status" :class="{pending: cloudSavePending}" @click="forceCloudSave" :title="cloudSavePending ? 'Click to save now' : 'All changes saved to cloud'">
-           <template v-if="cloudSavePending">
-             <i class="fa-solid fa-spinner fa-spin me-2"></i> Sync in {{cloudSaveCountdown}}s
+        <div class="cloud-sync-status" :class="{pending: cloudSavePending, local: !currentEmailId}" @click="forceCloudSave" :title="!currentEmailId ? 'Working locally. Click Save to Cloud to sync.' : (cloudSavePending ? 'Click to save now' : 'All changes saved to cloud')">
+           <template v-if="!currentEmailId">
+             <i class="fa-solid fa-laptop-code me-2"></i> Local Only
+           </template>
+           <template v-else-if="cloudSavePending">
+             <i class="fa-solid fa-spinner fa-spin me-2"></i> Syncing: {{currentEmailName}} ({{cloudSaveCountdown}}s)
            </template>
            <template v-else>
-             <i class="fa-solid fa-cloud-check text-success me-2"></i> Synced
+             <i class="fa-solid fa-cloud-check text-success me-2"></i> Synced: {{currentEmailName}}
            </template>
         </div>
         <div class="vd"></div>
         <button class="tool-btn" @click="templatesOpen=true" title="My Templates"><i class="fa-solid fa-folder-open"></i></button>
         <button class="tool-btn" @click="snippetsOpen=true" title="My Snippets"><i class="fa-solid fa-bookmark"></i></button>
+        <button class="tool-btn" @click="saveTemplateToDb" title="Save to Cloud"><i class="fa-solid fa-cloud-arrow-up"></i></button>
         <div class="vd"></div>
         <button class="tool-btn" @click="logout" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></button>
       </div>

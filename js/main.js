@@ -9,6 +9,11 @@ const app = createApp({
     const templatesOpen = ref(false);
     const snippetsOpen = ref(false);
     const currentEmailId = ref(null);
+    const currentEmailName = computed(() => {
+      if (!currentEmailId.value) return 'Local Only';
+      const t = myTemplates.value.find(x => x.id === currentEmailId.value);
+      return t ? t.name : 'Untitled';
+    });
     const hoveredSnippet = ref(null);
 
     if (window.fbHelper) {
@@ -45,7 +50,9 @@ const app = createApp({
         globalFonts: JSON.parse(JSON.stringify(globalFonts.value)),
         extraStyle: extraStyle.value,
       };
-      await window.fbHelper.saveEmailToDb(currentUser.value.uid, data, Date.now().toString());
+      const newId = Date.now().toString();
+      await window.fbHelper.saveEmailToDb(currentUser.value.uid, data, newId);
+      currentEmailId.value = newId;
       toast('Template saved to Database!');
       myTemplates.value = await window.fbHelper.loadUserEmails(currentUser.value.uid);
     }
@@ -1648,6 +1655,7 @@ const app = createApp({
         extraStyle.value = result.extraStyle || '';
 
         selectedId.value = null;
+        currentEmailId.value = null;
         importOpen.value = false;
         importText.value = '';
         welcomeOpen.value = false;
@@ -1709,7 +1717,7 @@ const app = createApp({
     }
 
     function saveNowCloud() {
-      if (welcomeOpen.value || !currentUser.value || !window.fbHelper) return;
+      if (welcomeOpen.value || !currentUser.value || !window.fbHelper || !currentEmailId.value) return;
       cloudSavePending.value = false;
       cloudSaveCountdown.value = 0;
       if (cloudInterval) clearInterval(cloudInterval);
@@ -1723,7 +1731,7 @@ const app = createApp({
           extraStyle: extraStyle.value,
           ts: Date.now()
         }));
-        window.fbHelper.saveEmailToDb(currentUser.value.uid, payload, 'autosave');
+        window.fbHelper.saveEmailToDb(currentUser.value.uid, payload, currentEmailId.value);
         console.log('[MailArchitect] Progress saved to cloud');
       } catch (e) { console.warn('Cloud save failed:', e); }
     }
@@ -1732,7 +1740,7 @@ const app = createApp({
       if (localSaveTimer) clearTimeout(localSaveTimer);
       localSaveTimer = setTimeout(saveNowLocal, 1000);
       
-      if (currentUser.value) {
+      if (currentUser.value && currentEmailId.value) {
         if (!cloudSavePending.value) {
           cloudSavePending.value = true;
           cloudSaveCountdown.value = 10;
@@ -1931,7 +1939,7 @@ const app = createApp({
       getPropValue, setPropValue, getPropNumeric, setPropNumeric,
       getActiveTheme, setActiveTheme,
       PROP_DEFS, PROP_CATEGORIES,
-      currentUser, login, logout, templatesOpen, snippetsOpen, currentEmailId, myTemplates, saveTemplateToDb, loadTemplateFromDb,
+      currentUser, login, logout, templatesOpen, snippetsOpen, currentEmailId, currentEmailName, myTemplates, saveTemplateToDb, loadTemplateFromDb,
       deleteTemplate, renameTemplate,
       mySnippets, saveSnippet, addSnippetFromPopup, deleteSnippetItem, renameSnippetItem,
       cloudSavePending, cloudSaveCountdown, forceCloudSave, hoveredSnippet
