@@ -553,7 +553,6 @@ const app = createApp({
       scheduleRender();
     }
 
-    const stdMjmlAttrs = new Set(['align', 'background-color', 'background-url', 'background-repeat', 'background-size', 'background-position', 'border', 'border-bottom', 'border-left', 'border-right', 'border-top', 'border-radius', 'color', 'container-background-color', 'direction', 'font-family', 'font-size', 'font-style', 'font-weight', 'height', 'letter-spacing', 'line-height', 'padding', 'padding-bottom', 'padding-left', 'padding-right', 'padding-top', 'text-align', 'text-decoration', 'vertical-align', 'width', 'src', 'href', 'target', 'alt', 'mode', 'full-width', 'fluid-on-mobile', 'inner-padding', 'inner-background-color', 'text-transform', 'border-width', 'border-style', 'border-color', 'rel', 'path']);
 
     function deleteProp(obj, key, isDark = false) {
       if (!obj) return;
@@ -613,8 +612,10 @@ const app = createApp({
         // If it's a node with attrs/style, use the appropriate collection
         if (obj.attrs && stdMjmlAttrs.has(key)) {
           obj.attrs[key] = val;
+          if (obj.style) delete obj.style[key]; // Maintain consistency
         } else if (obj.style) {
           obj.style[key] = val;
+          if (obj.attrs) delete obj.attrs[key]; // Maintain consistency
         } else if (obj.props) {
           obj.props[key] = val;
         }
@@ -870,6 +871,14 @@ const app = createApp({
         }
       }
 
+      // Global Fixes (border-radius inheritance)
+      css += `
+      [style*="border-radius"] > table,
+      [style*="border-radius"] > div > table {
+        border-radius: inherit !important;
+      }
+      `;
+
       return css;
     });
 
@@ -902,14 +911,7 @@ const app = createApp({
       // only including standard MJML attributes that buildAttrs handles.
       // if (bodyNode) scanInline([bodyNode]); 
 
-      const globalFixes = `
-      [style*="border-radius"] > table,
-      [style*="border-radius"] > div > table {
-        border-radius: inherit !important;
-      }
-      `;
-
-      const styleComb = (globalFixes + '\n' + computedStyle.value + '\n' + inlineStyleRules + '\n' + (extraStyle.value || '')).trim();
+      const styleComb = (computedStyle.value + '\n' + inlineStyleRules + '\n' + (extraStyle.value || '')).trim();
       const stylePart = styleComb ? `    <mj-style>\n      ${styleComb}\n    </mj-style>\n` : '';
 
       let headChildrenHtml = '';
@@ -920,18 +922,18 @@ const app = createApp({
             if (c.type === 'mj-attributes') hasTreeAttributes = true;
             continue;
           }
-          headChildrenHtml += compileNode(c, 2, globalProps.value, typeDefaults.value, { includeInternalIds: false }) + '\n';
+          headChildrenHtml += '\n' + compileNode(c, 2, globalProps.value, typeDefaults.value, { includeInternalIds: false });
         }
       }
 
       let finalAttributesBlock = '';
       if (globalAttributes.value) {
-        finalAttributesBlock = `    <mj-attributes>\n${globalAttributes.value}    </mj-attributes>\n`;
+        finalAttributesBlock = `\n    <mj-attributes>\n${globalAttributes.value}    </mj-attributes>`;
       }
 
-      const fullHead = `  <mj-head>\n${fonts}${finalAttributesBlock}${stylePart}${headChildrenHtml}  </mj-head>`;
-      const fullBody = bodyNode ? compileNode(bodyNode, 1, globalProps.value, typeDefaults.value, { includeInternalIds: false }) : '  <mj-body></mj-body>';
-      return `<mjml>\n${fullHead}\n${fullBody}\n</mjml>`;
+      const fullHead = `  <mj-head>\n${fonts}${finalAttributesBlock}${stylePart}${headChildrenHtml}\n  </mj-head>`;
+      const fullBody = bodyNode ? compileNode(bodyNode, 1, globalProps.value, typeDefaults.value, { includeInternalIds: false }) : '\n  <mj-body></mj-body>';
+      return formatMjml(`<mjml>\n${fullHead}\n${fullBody}\n</mjml>`);
     });
 
     watch([viewMode, mjmlSource], ([v, source]) => {
@@ -956,22 +958,23 @@ const app = createApp({
 
       // We exclude mja- internal IDs from clean export's style block
       // computedStyle already contains clean class rules and dark modes.
-      const stylePart = computedStyle.value ? `    <mj-style>\n${computedStyle.value}    </mj-style>\n` : '';
+      const styleComb = (computedStyle.value + '\n' + (extraStyle.value || '')).trim();
+      const stylePart = styleComb ? `    <mj-style>\n${styleComb}\n    </mj-style>\n` : '';
       
       let headHtml = '';
       if (head && head.children) {
         for (const c of head.children) {
           if (!['mj-attributes', 'mj-font', 'mj-style'].includes(c.type)) {
-             headHtml += compileNode(c, 2, globalProps.value, typeDefaults.value, { includeInternalIds: false, allClasses: classes.value }) + '\n';
+             headHtml += '\n' + compileNode(c, 2, globalProps.value, typeDefaults.value, { includeInternalIds: false, allClasses: classes.value });
           }
         }
       }
       
-      const finalAttributesBlock = globalAttributes.value ? `    <mj-attributes>\n${globalAttributes.value}    </mj-attributes>\n` : '';
-      const headBlock = `  <mj-head>\n${fonts}${finalAttributesBlock}${stylePart}${headHtml}  </mj-head>`;
-      const bodyBlock = bodyNode ? compileNode(bodyNode, 1, globalProps.value, typeDefaults.value, { includeInternalIds: false, allClasses: classes.value }) : '  <mj-body></mj-body>';
+      const finalAttributesBlock = globalAttributes.value ? `\n    <mj-attributes>\n${globalAttributes.value}    </mj-attributes>` : '';
+      const headBlock = `  <mj-head>\n${fonts}${finalAttributesBlock}${stylePart}${headHtml}\n  </mj-head>`;
+      const bodyBlock = bodyNode ? compileNode(bodyNode, 1, globalProps.value, typeDefaults.value, { includeInternalIds: false, allClasses: classes.value }) : '\n  <mj-body></mj-body>';
       
-      return `<mjml>\n${headBlock}\n${bodyBlock}\n</mjml>`;
+      return formatMjml(`<mjml>\n${headBlock}\n${bodyBlock}\n</mjml>`);
     });
 
     const generatedHtml = computed(() => {
@@ -1057,8 +1060,19 @@ const app = createApp({
 
     function onRteInput() {
       if (!rteEl.value || !selectedNode.value) return;
-      selectedNode.value.content = rteEl.value.innerHTML;
+      // Convert &nbsp; and \u00A0 to regular spaces, and strip edge newlines that cause spacing issues
+      selectedNode.value.content = rteEl.value.innerHTML
+        .replace(/&nbsp;|\u00A0/g, ' ')
+        .replace(/^[\r\n]+|[\r\n]+$/g, '');
       scheduleRender();
+    }
+
+    function handleRteKeydown(e) {
+      if (e.key === ' ') {
+        e.preventDefault();
+        document.execCommand('insertText', false, ' ');
+        onRteInput();
+      }
     }
     function insertRteBr() {
       document.execCommand('insertHTML', false, '<br>');
@@ -1290,11 +1304,15 @@ const app = createApp({
 
       let headChildrenHtml = '';
       if (head && head.children) {
-        for (const c of head.children) headChildrenHtml += compileNode(c, 2, globalProps.value, typeDefaults.value, { includeInternalIds: true, previewMode: true, allClasses: classes.value }) + '\n';
+        for (const c of head.children) {
+          if (!['mj-attributes', 'mj-font', 'mj-style'].includes(c.type)) {
+            headChildrenHtml += '\n' + compileNode(c, 2, globalProps.value, typeDefaults.value, { includeInternalIds: true, previewMode: true, allClasses: classes.value });
+          }
+        }
       }
 
-      const fullHead = `  <mj-head>\n${fonts}    <mj-attributes>\n${globalAttributes.value}    </mj-attributes>\n${stylePart}${headChildrenHtml}  </mj-head>`;
-      const fullBody = bodyNode ? compileNode(bodyNode, 1, globalProps.value, typeDefaults.value, { includeInternalIds: true, previewMode: true, allClasses: classes.value }) : '  <mj-body></mj-body>';
+      const fullHead = `  <mj-head>\n${fonts}    <mj-attributes>\n${globalAttributes.value}    </mj-attributes>\n${stylePart}${headChildrenHtml}\n  </mj-head>`;
+      const fullBody = bodyNode ? compileNode(bodyNode, 1, globalProps.value, typeDefaults.value, { includeInternalIds: true, previewMode: true, allClasses: classes.value }) : '\n  <mj-body></mj-body>';
 
       return `<mjml>\n${fullHead}\n${fullBody}\n</mjml>`;
     });
@@ -1698,7 +1716,7 @@ const app = createApp({
       importOpen, importText, importErr, importFileInput, triggerImport, handleFileImport, applyImport, openImportModal,
       hoverNodeId, setHoverNode,
       prevSel, openLinkFromPreview,
-      showRawHtml, rteEl, linkInput, linkPop, execFmt, isFmt, startLink, applyLink, removeLink, removeLinkFromPopup, onRteInput, onRteClick, insertRteBr,
+      showRawHtml, rteEl, linkInput, linkPop, execFmt, isFmt, startLink, applyLink, removeLink, removeLinkFromPopup, onRteInput, onRteClick, insertRteBr, handleRteKeydown,
       leftW, treeW, rightW, startResize,
       showAdvanced, showAdvancedInline, openCatsMap, toggleCategory, isCategoryOpen,
 

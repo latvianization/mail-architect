@@ -134,18 +134,16 @@ function buildAttrs(node, globalProps = {}, typeDefaults = {}, options = {}) {
 
   const tagDefaults = typeDefaults[node.type] || {};
 
+  const finalAttrs = {};
   if (node.attrs) {
     for (const [k, v] of Object.entries(node.attrs)) {
-      if (v !== undefined && v !== null && v !== '') s += ` ${k}="${String(v).replace(/"/g, '&quot;')}"`;
+      if (v !== undefined && v !== null && v !== '') finalAttrs[k] = v;
     }
   }
 
   // Handle Inline Styles
   if (node.style && Object.keys(node.style).length > 0) {
     const inlineStyles = [];
-    // Properties that MJML supports as direct attributes on almost all tags
-    const stdMjmlAttrs = new Set(['align', 'background-color', 'background-url', 'background-repeat', 'background-size', 'background-position', 'border', 'border-bottom', 'border-left', 'border-right', 'border-top', 'border-radius', 'color', 'container-background-color', 'direction', 'font-family', 'font-size', 'font-style', 'font-weight', 'height', 'letter-spacing', 'line-height', 'padding', 'padding-bottom', 'padding-left', 'padding-right', 'padding-top', 'text-align', 'text-decoration', 'vertical-align', 'width', 'src', 'href', 'target', 'alt', 'mode', 'full-width', 'fluid-on-mobile', 'inner-padding', 'inner-background-color', 'text-transform', 'border-width', 'border-style', 'border-color', 'rel', 'path']);
-
 
     for (const [k, v] of Object.entries(node.style)) {
       if (v === undefined || v === null || v === '') continue;
@@ -153,40 +151,81 @@ function buildAttrs(node, globalProps = {}, typeDefaults = {}, options = {}) {
         // Suppress if value matches global default OR tag-specific default
         if (globalProps && globalProps[k] === v) continue;
         if (tagDefaults[k] === v) continue;
-        s += ` ${k}="${String(v).replace(/"/g, '&quot;')}"`;
+        finalAttrs[k] = v;
       } else if (!noRawStyleTags.has(node.type)) {
         inlineStyles.push(`${k}:${v}`);
       }
     }
     if (inlineStyles.length > 0 && !noRawStyleTags.has(node.type)) {
-      s += ` style="${inlineStyles.join(';')}"`;
+      finalAttrs['style'] = inlineStyles.join(';');
     }
   }
 
   // Force mj-text to inherit color natively to allow CSS classes to cascade effectively 
   // and override MJML's hard-coded default `#000000` text color without requiring complex child selectors.
   if (node.type === 'mj-text') {
-    const hasInlineColor = node.attrs?.['color'] || (node.style && node.style['color']);
+    const hasInlineColor = finalAttrs['color'];
     if (!hasInlineColor) {
-      s += ` color="inherit"`;
+      finalAttrs['color'] = 'inherit';
     }
+  }
+
+  for (const [k, v] of Object.entries(finalAttrs)) {
+    s += ` ${k}="${String(v).replace(/"/g, '&quot;')}"`;
   }
 
   return s;
 }
 
+function formatMjml(src) {
+  if (!src) return '';
+  // Since compileNode now handles indentation, we just use beautify to clean up any oddities 
+  // and handle the mj-style CSS block formatting.
+  if (window.html_beautify) {
+    return window.html_beautify(src, {
+      indent_size: 2,
+      wrap_line_length: 120,
+      unformatted: ['mj-text', 'mj-raw', 'mj-style'],
+      content_unformatted: ['mj-text', 'mj-raw', 'mj-style'],
+      indent_inner_html: true,
+      extra_liners: []
+    });
+  }
+  return src;
+}
 
-function compileNode(node, depth, globalProps = {}, typeDefaults = {}, options = {}) {
+function compileNode(node, depth = 0, globalProps = {}, typeDefaults = {}, options = {}) {
   const pad = '  '.repeat(depth);
   const attrs = buildAttrs(node, globalProps, typeDefaults, options);
   const isLeaf = node.children === undefined;
+
   if (isLeaf && !node.content) return `${pad}<${node.type}${attrs} />`;
+
   let out = `${pad}<${node.type}${attrs}>`;
+
   if (node.content) {
-    let c = node.content;
-    out += '\n' + '  '.repeat(depth + 1) + c;
+    // For content, we trim it and then put it on a new line with indentation if it's a block
+    // but for mj-text we might want to keep it somewhat compact if it's short.
+    const cleanContent = node.content.trim();
+    const lines = cleanContent.split('\n');
+    
+    // Only add manual formatting newlines if there are actual physical newlines in the content,
+    // OR if it's a style block which usually looks better formatted.
+    if (lines.length > 1 || node.type === 'mj-style') {
+      out += '\n' + lines.map(l => '  '.repeat(depth + 1) + l).join('\n') + '\n' + pad;
+    } else {
+      out += cleanContent;
+    }
   }
-  if (node.children) { if (node.children.length) { out += '\n'; for (const c of node.children) out += compileNode(c, depth + 1, globalProps, typeDefaults, options) + '\n'; out += pad; } }
+
+  if (node.children && node.children.length) {
+    out += '\n';
+    for (const c of node.children) {
+      out += compileNode(c, depth + 1, globalProps, typeDefaults, options) + '\n';
+    }
+    out += pad;
+  }
+
   out += `</${node.type}>`;
   return out;
 }
@@ -241,8 +280,8 @@ function parseMjmlToTree(src) {
   }
 
   // 3. Parse mj-style for dark mode, local overrides, and MIGRATING simple classes to Global Classes
-  const styleEl = doc.querySelector('mj-style');
-  if (styleEl) {
+  const styleEls = doc.querySelectorAll('mj-style');
+  for (const styleEl of styleEls) {
     let css = styleEl.textContent.replace(/\/\*[\s\S]*?\*\//g, '');
     
     function parseBlocks(cssString) {
@@ -277,15 +316,29 @@ function parseMjmlToTree(src) {
     
     function processRule(selectorPart, contentTrim, isDark) {
       const selectors = selectorPart.split(',').map(s => s.trim()).filter(Boolean);
+      
+      // Builder-generated patterns to skip entirely during import
+      const filteredSelectors = selectors.filter(s => {
+        if (s.includes('[style*="border-radius"]')) return false;
+        if (s.includes('.mja-fix-w-')) return false;
+        if (s.includes(' > table') || s.includes(' > div > table')) return false;
+        if (/\s+(div|span|a|td)$/i.test(s)) return false;
+        return true;
+      });
+
+      if (filteredSelectors.length === 0) return;
+
       const props = {};
       contentTrim.split(';').forEach(p => {
         const [k, v] = p.split(':');
         if (k && v) props[k.trim()] = v.replace('!important', '').trim();
       });
 
+      if (Object.keys(props).length === 0) return;
+
       const complexSelectors = [];
 
-      selectors.forEach(fullSelector => {
+      filteredSelectors.forEach(fullSelector => {
         // CASE A: Local ID Overrides (.mja-id)
         if (fullSelector.startsWith('.mja-') && !fullSelector.includes(' ') && !fullSelector.includes(',')) {
           const id = fullSelector.replace('.mja-', '');
@@ -307,13 +360,20 @@ function parseMjmlToTree(src) {
         }
         // CASE D: Complex selectors (.tg-h1 p, body, etc.)
         else {
+          // If it's "body", and we have an mj-body, it might be better handled, 
+          // but for now we keep it in extraStyle to be safe.
           complexSelectors.push(fullSelector);
         }
       });
 
       if (complexSelectors.length > 0) {
-        if (isDark) extraStyle += `@media (prefers-color-scheme: dark) {\n  ${complexSelectors.join(', ')} { ${contentTrim} }\n}\n`;
-        else extraStyle += `${complexSelectors.join(', ')} { ${contentTrim} }\n`;
+        let rule = `${complexSelectors.join(', ')} { ${contentTrim} }`;
+        if (isDark) {
+          let darkBlock = `@media (prefers-color-scheme: dark) {\n  ${rule}\n}\n`;
+          if (!extraStyle.includes(darkBlock)) extraStyle += darkBlock;
+        } else {
+          if (!extraStyle.includes(rule)) extraStyle += rule + '\n';
+        }
       }
     }
 
@@ -330,6 +390,7 @@ function parseMjmlToTree(src) {
     });
   }
 
+
   // Inject dark mode props into classes
   newClasses.forEach(c => {
     if (darkStyleLookup[c.name]) {
@@ -338,19 +399,16 @@ function parseMjmlToTree(src) {
     }
   });
 
-  const stdMjmlAttrs = new Set(['align', 'background-color', 'background-url', 'background-repeat', 'background-size', 'background-position', 'border', 'border-bottom', 'border-left', 'border-right', 'border-top', 'border-radius', 'color', 'container-background-color', 'direction', 'font-family', 'font-size', 'font-style', 'font-weight', 'height', 'letter-spacing', 'line-height', 'padding', 'padding-bottom', 'padding-left', 'padding-right', 'padding-top', 'text-align', 'text-decoration', 'vertical-align', 'width', 'src', 'href', 'target', 'alt', 'mode', 'full-width', 'fluid-on-mobile', 'inner-padding', 'inner-background-color', 'text-transform', 'border-width', 'border-style', 'border-color', 'rel', 'path']);
 
   function parseEl(el) {
     const type = el.tagName.toLowerCase();
     const idAttr = el.getAttribute('id') || '';
-    const cssClassLine = el.getAttribute('css-class') || el.getAttribute('class') || '';
     const m = idAttr.match(/^mja-([a-z0-9]+)$/);
     const id = m ? m[1] : uid();
 
     const cls = (el.getAttribute('mj-class') || '').split(' ').filter(Boolean);
     const cssCls = (el.getAttribute('css-class') || el.getAttribute('class') || '').split(' ').filter(c => c && !c.startsWith('mja-'));
     cssCls.forEach(c => { if (!cls.includes(c)) cls.push(c); });
-    const manualCls = []; // Already captured in cls above.
     const attrs = {};
     for (const a of el.attributes) {
       if (a.name !== 'mj-class' && a.name !== 'css-class' && a.name !== 'id') attrs[a.name] = a.value;
@@ -358,14 +416,19 @@ function parseMjmlToTree(src) {
 
     let content = '', children = undefined;
     if (TEXT_TYPES.includes(type)) {
-      content = el.innerHTML;
+      // Very aggressive trim to ensure DOMParser doesn't leak leading newlines from formatted HTML back into the content model
+      content = el.innerHTML.trim().replace(/^[\r\n]+|[\r\n]+$/g, '').trim().replace(/&nbsp;|\u00A0/g, ' ');
     } else {
       children = [];
       for (const child of el.children) {
-        if (child.tagName.toLowerCase().startsWith('mj-')) children.push(parseEl(child));
+        const ctype = child.tagName.toLowerCase();
+        if (ctype.startsWith('mj-')) {
+          // Skip blocks that we've already parsed into application state to avoid duplication in the tree
+          if (ctype === 'mj-style' || ctype === 'mj-font' || ctype === 'mj-attributes') continue;
+          children.push(parseEl(child));
+        }
       }
     }
-
     // --- Attribute Priority Merging ---
     const style = {};
     

@@ -192,7 +192,7 @@
                 <button class="rte-btn" @mousedown.prevent="showRawHtml=!showRawHtml" :class="{active:showRawHtml}"><i class="fa-solid fa-code"></i></button>
               </div>
               <textarea v-if="showRawHtml" class="field-input rte-editor" v-model="selectedNode.content" @input="onRteInput"></textarea>
-              <div v-else class="rte-editor" ref="rteEl" contenteditable="true" @input="onRteInput" @click="onRteClick" @keydown.enter.exact.prevent="insertRteBr"></div>
+              <div v-else class="rte-editor" ref="rteEl" contenteditable="true" @input="onRteInput" @click="onRteClick" @keydown.enter.exact.prevent="insertRteBr" @keydown.space="handleRteKeydown"></div>
               
               <!-- Link Popup -->
               <div class="link-popup" v-if="linkPop.show" v-click-outside="()=>linkPop.show=false">
@@ -404,7 +404,6 @@
             <i class="fa-solid fa-swatchbook d-block mb-2" style="font-size:24px; opacity:0.3"></i>
             No classes defined yet.
           </div>
-        </template>
         </template>
       </div>
     </aside>
