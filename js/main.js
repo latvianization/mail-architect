@@ -1697,7 +1697,7 @@ const app = createApp({
       cloudSaveCountdown.value = 0;
       if (cloudInterval) clearInterval(cloudInterval);
       try {
-        const payload = {
+        const payload = JSON.parse(JSON.stringify({
           tree: tree.value,
           classes: classes.value,
           globalProps: globalProps.value,
@@ -1705,7 +1705,7 @@ const app = createApp({
           globalFonts: globalFonts.value,
           extraStyle: extraStyle.value,
           ts: Date.now()
-        };
+        }));
         window.fbHelper.saveEmailToDb(currentUser.value.uid, payload, 'autosave');
         console.log('[MailArchitect] Progress saved to cloud');
       } catch (e) { console.warn('Cloud save failed:', e); }
