@@ -31,7 +31,6 @@
     <div class="logo">
       <div class="logo-icon"><i class="fa-solid fa-envelope-open-text"></i></div>
       <span class="logo-name">MailArchitect</span>
-      <span class="logo-badge">PRO</span>
     </div>
 
     <div class="d-flex align-items-center gap-2">
@@ -81,6 +80,12 @@
         <button class="tool-btn" @click="saveTemplateToDb" title="Save to Cloud"><i class="fa-solid fa-cloud-arrow-up"></i></button>
         <div class="vd"></div>
         <button class="tool-btn" @click="logout" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></button>
+      </div>
+
+      <div class="vd"></div>
+
+      <div class="tool-group">
+        <button class="tool-btn" @click="optionsOpen=true" title="Project Options"><i class="fa-solid fa-gear"></i></button>
       </div>
 
       <div class="vd"></div>
@@ -679,6 +684,41 @@
           <div class="text-muted">Hover over a component to see details</div>
         </template>
 
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Project Options Modal ────────────────────────────────── -->
+  <div class="modal-overlay" v-if="optionsOpen" @click.self="optionsOpen=false">
+    <div class="modal-box modal-sm">
+      <div class="modal-hdr">
+        <div class="modal-hdr-title"><i class="fa-solid fa-gear" style="color:#64748b"></i> Project Options</div>
+      </div>
+      <div class="p-4">
+        <div class="inspector-section-label mb-3">CSS Fixes</div>
+        
+        <div class="form-check form-switch mb-3">
+          <input class="form-check-input" type="checkbox" id="fixBorderRadius" v-model="projectSettings.borderRadiusFix">
+          <label class="form-check-label fw-bold ms-2" for="fixBorderRadius" style="font-size: 13px; cursor: pointer;">
+            Enable border-radius fix
+          </label>
+          <div class="text-muted mt-1" style="font-size: 11px; margin-left: 2.5rem;">
+            Forces tables inside containers with border-radius to inherit the radius. Fixes display issues in some email clients.
+          </div>
+        </div>
+
+        <div class="form-check form-switch mb-3">
+          <input class="form-check-input" type="checkbox" id="fixColumnWidth" v-model="projectSettings.columnWidthFix">
+          <label class="form-check-label fw-bold ms-2" for="fixColumnWidth" style="font-size: 13px; cursor: pointer;">
+            Enable fixed column width classes
+          </label>
+          <div class="text-muted mt-1" style="font-size: 11px; margin-left: 2.5rem;">
+            Adds helper classes to prevent MJML from converting pixel widths to percentages. Useful for precise layouts.
+          </div>
+        </div>
+      </div>
+      <div class="modal-ftr">
+        <button class="btn-export w-100" @click="optionsOpen=false">Done</button>
       </div>
     </div>
   </div>

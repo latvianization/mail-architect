@@ -126,7 +126,7 @@ function buildAttrs(node, globalProps = {}, typeDefaults = {}, options = {}) {
         }
       }
 
-      if (w && String(w).endsWith('px')) {
+      if (options.columnWidthFix !== false && w && String(w).endsWith('px')) {
         classList.push(`mja-fix-w-${String(w).replace('px', '')}`);
       }
     }
@@ -175,7 +175,31 @@ function buildAttrs(node, globalProps = {}, typeDefaults = {}, options = {}) {
     }
   }
 
-  for (const [k, v] of Object.entries(finalAttrs)) {
+  const sortedKeys = Object.keys(finalAttrs).sort((a, b) => {
+    const getPriority = (k) => {
+      if (k === 'padding') return 10;
+      if (k.startsWith('padding-')) return 11;
+      if (k === 'margin') return 12;
+      if (k.startsWith('margin-')) return 13;
+      if (k === 'border') return 20;
+      if (k.startsWith('border-')) return 21;
+      if (k === 'border-radius') return 30;
+      if (k === 'inner-padding') return 40;
+      if (k.startsWith('inner-padding-')) return 41;
+      if (k === 'icon-padding') return 50;
+      if (k.startsWith('icon-padding-')) return 51;
+      if (k === 'text-padding') return 60;
+      if (k.startsWith('text-padding-')) return 61;
+      return 100;
+    };
+    const pa = getPriority(a);
+    const pb = getPriority(b);
+    if (pa !== pb) return pa - pb;
+    return a.localeCompare(b);
+  });
+
+  for (const k of sortedKeys) {
+    const v = finalAttrs[k];
     s += ` ${k}="${String(v).replace(/"/g, '&quot;')}"`;
   }
 

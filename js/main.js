@@ -9,6 +9,11 @@ const app = createApp({
     const templatesOpen = ref(false);
     const snippetsOpen = ref(false);
     const currentEmailId = ref(null);
+    const optionsOpen = ref(false);
+    const projectSettings = reactive({
+      borderRadiusFix: true,
+      columnWidthFix: true
+    });
     const currentEmailName = computed(() => {
       if (!currentEmailId.value) return 'Local Only';
       const t = myTemplates.value.find(x => x.id === currentEmailId.value);
@@ -49,6 +54,7 @@ const app = createApp({
         typeDefaults: JSON.parse(JSON.stringify(typeDefaults.value)),
         globalFonts: JSON.parse(JSON.stringify(globalFonts.value)),
         extraStyle: extraStyle.value,
+        projectSettings: JSON.parse(JSON.stringify(projectSettings)),
       };
       const newId = Date.now().toString();
       await window.fbHelper.saveEmailToDb(currentUser.value.uid, data, newId);
@@ -65,6 +71,11 @@ const app = createApp({
       typeDefaults.value = t.typeDefaults || {};
       globalFonts.value = t.globalFonts || [];
       extraStyle.value = t.extraStyle || '';
+      if (t.projectSettings) {
+        Object.assign(projectSettings, t.projectSettings);
+      } else {
+        projectSettings.borderRadiusFix = true; // reset to default
+      }
       currentEmailId.value = t.id;
       templatesOpen.value = false;
       toast('Template loaded from Database!');
@@ -938,6 +949,7 @@ const app = createApp({
           }
         }
         
+        if (pStandard.length === 0) return '';
         let res = `      ${selector} { ${pStandard.join(' ')} }\n`;
         
         if (pBg.length > 0 || pColor.length > 0) {
@@ -1006,7 +1018,7 @@ const app = createApp({
         css += `\n      @media (prefers-color-scheme: dark) {\n${darkRules}      }\n`;
       }
 
-      if (pxWidths.size > 0) {
+      if (projectSettings.columnWidthFix && pxWidths.size > 0) {
         for (const w of pxWidths) {
           css += `
       .mja-fix-w-${w}, 
@@ -1021,12 +1033,14 @@ const app = createApp({
       }
 
       // Global Fixes (border-radius inheritance)
-      css += `
-      [style*="border-radius"] > table,
-      [style*="border-radius"] > div > table {
-        border-radius: inherit !important;
+      if (projectSettings.borderRadiusFix) {
+        css += `
+        [style*="border-radius"] > table,
+        [style*="border-radius"] > div > table {
+          border-radius: inherit !important;
+        }
+        `;
       }
-      `;
 
       return css;
     });
@@ -1081,7 +1095,7 @@ const app = createApp({
       }
 
       const fullHead = `  <mj-head>\n${fonts}${finalAttributesBlock}${stylePart}${headChildrenHtml}\n  </mj-head>`;
-      const fullBody = bodyNode ? compileNode(bodyNode, 1, globalProps.value, typeDefaults.value, { includeInternalIds: false }) : '\n  <mj-body></mj-body>';
+      const fullBody = bodyNode ? compileNode(bodyNode, 1, globalProps.value, typeDefaults.value, { includeInternalIds: false, columnWidthFix: projectSettings.columnWidthFix }) : '\n  <mj-body></mj-body>';
       return formatMjml(`<mjml>\n${fullHead}\n${fullBody}\n</mjml>`);
     });
 
@@ -1121,7 +1135,7 @@ const app = createApp({
       
       const finalAttributesBlock = globalAttributes.value ? `\n    <mj-attributes>\n${globalAttributes.value}    </mj-attributes>` : '';
       const headBlock = `  <mj-head>\n${fonts}${finalAttributesBlock}${stylePart}${headHtml}\n  </mj-head>`;
-      const bodyBlock = bodyNode ? compileNode(bodyNode, 1, globalProps.value, typeDefaults.value, { includeInternalIds: false, allClasses: classes.value }) : '\n  <mj-body></mj-body>';
+      const bodyBlock = bodyNode ? compileNode(bodyNode, 1, globalProps.value, typeDefaults.value, { includeInternalIds: false, allClasses: classes.value, columnWidthFix: projectSettings.columnWidthFix }) : '\n  <mj-body></mj-body>';
       
       return formatMjml(`<mjml>\n${headBlock}\n${bodyBlock}\n</mjml>`);
     });
@@ -1461,7 +1475,7 @@ const app = createApp({
       }
 
       const fullHead = `  <mj-head>\n${fonts}    <mj-attributes>\n${globalAttributes.value}    </mj-attributes>\n${stylePart}${headChildrenHtml}\n  </mj-head>`;
-      const fullBody = bodyNode ? compileNode(bodyNode, 1, globalProps.value, typeDefaults.value, { includeInternalIds: true, previewMode: true, allClasses: classes.value }) : '\n  <mj-body></mj-body>';
+      const fullBody = bodyNode ? compileNode(bodyNode, 1, globalProps.value, typeDefaults.value, { includeInternalIds: true, previewMode: true, allClasses: classes.value, columnWidthFix: projectSettings.columnWidthFix }) : '\n  <mj-body></mj-body>';
 
       return `<mjml>\n${fullHead}\n${fullBody}\n</mjml>`;
     });
@@ -1558,7 +1572,7 @@ const app = createApp({
       }
     }
     function scheduleRender() { if (debounceTimer) clearTimeout(debounceTimer); debounceTimer = setTimeout(renderPreview, 600); }
-    watch([tree, classes, previewTheme], scheduleRender, { deep: true });
+    watch([tree, classes, previewTheme, projectSettings], scheduleRender, { deep: true });
     function setDevice(w) { deviceWidth.value = w; }
 
 
@@ -1708,6 +1722,7 @@ const app = createApp({
           typeDefaults: typeDefaults.value,
           globalFonts: globalFonts.value,
           extraStyle: extraStyle.value,
+          projectSettings: JSON.parse(JSON.stringify(projectSettings)),
           undoStack: undoStack.value,
           redoStack: redoStack.value,
           ts: Date.now()
@@ -1729,6 +1744,7 @@ const app = createApp({
           typeDefaults: typeDefaults.value,
           globalFonts: globalFonts.value,
           extraStyle: extraStyle.value,
+          projectSettings: JSON.parse(JSON.stringify(projectSettings)),
           ts: Date.now()
         }));
         window.fbHelper.saveEmailToDb(currentUser.value.uid, payload, currentEmailId.value);
@@ -1879,6 +1895,9 @@ const app = createApp({
             typeDefaults.value = saved.typeDefaults || {};
             globalFonts.value = saved.globalFonts || [];
             extraStyle.value = saved.extraStyle || '';
+            if (saved.projectSettings) {
+              Object.assign(projectSettings, saved.projectSettings);
+            }
             if (saved.undoStack) undoStack.value = saved.undoStack;
             if (saved.redoStack) redoStack.value = saved.redoStack;
             savedStateCache = saved;
@@ -1898,6 +1917,7 @@ const app = createApp({
       undo, redo, canUndo, canRedo,
       deviceWidth, deviceLabel, previewTheme, viewMode, showGuides, tab, selectedId, selectedNode,
       codeTab, generatedHtml,
+      optionsOpen, projectSettings,
       previewFrame, previewWrap, previewHeight, compileError, hasContent,
       componentLibrary: computed(() => {
         // Exclude root-level singletons from the general gallery
