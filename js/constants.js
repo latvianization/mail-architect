@@ -233,17 +233,17 @@ const PROP_DEFS = {
   'cellspacing':    { type: 'input', icon: 'fa-table-cells-large' },
 
   // Image Specifics
-  'src':            { type: 'input', icon: 'fa-image' },
-  'href':           { type: 'input', icon: 'fa-link' },
-  'alt':            { type: 'input', icon: 'fa-quote-left' },
-  'title':          { type: 'input', icon: 'fa-circle-info' },
+  'src':            { type: 'textarea', icon: 'fa-image' },
+  'href':           { type: 'textarea', icon: 'fa-link' },
+  'alt':            { type: 'textarea', icon: 'fa-quote-left' },
+  'title':          { type: 'textarea', icon: 'fa-circle-info' },
   'fluid-on-mobile':{ type: 'select', options: ['true', 'false'], icon: 'fa-mobile-screen' },
-  'thumbnails-src': { type: 'input', icon: 'fa-image' },
+  'thumbnails-src': { type: 'textarea', icon: 'fa-image' },
 
   // Column & Section Controls
   'vertical-align': { type: 'select', options: ['top', 'middle', 'bottom'], icon: 'fa-align-center' },
   'full-width':     { type: 'select', options: ['true', 'false'], icon: 'fa-arrows-left-right' },
-  'background-url': { type: 'input', icon: 'fa-image' },
+  'background-url': { type: 'textarea', icon: 'fa-image' },
   'background-size':{ type: 'select', options: ['cover', 'contain', 'auto'], icon: 'fa-maximize' },
   'background-repeat':{ type: 'select', options: ['no-repeat', 'repeat', 'repeat-x', 'repeat-y'], icon: 'fa-repeat' },
   'background-position':{ type: 'input', icon: 'fa-location-dot' },

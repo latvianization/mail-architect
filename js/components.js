@@ -111,7 +111,7 @@ const VisualEditorComp = {
           <template v-if="isCategorySupported(cat)">
             <div class="inspector-section-label sub">{{cat.name}}</div>
             <template v-for="pkey in cat.props" :key="pkey">
-              <div v-if="shouldShow(pkey)" class="prop-item-compact" :class="{'prop-item-full': defs[pkey].type==='sides', 'has-value': helpers.hasPropValue(cls, pkey, isDark)}">
+              <div v-if="shouldShow(pkey)" class="prop-item-compact" :class="{'prop-item-full': defs[pkey].type==='sides' || defs[pkey].type==='textarea', 'has-value': helpers.hasPropValue(cls, pkey, isDark)}">
                 <template v-if="defs[pkey]">
                   <div class="prop-item-label" :title="pkey">
                     <i class="fa-solid" :class="defs[pkey].icon"></i>
@@ -141,6 +141,8 @@ const VisualEditorComp = {
                                :value="helpers.getPropValue(cls, pkey, isDark)"
                                @input="helpers.setPropValue(cls, pkey, $event.target.value, isDark)">
                     </div>
+
+                    <textarea v-else-if="defs[pkey].type==='textarea'" class="prop-input-mini" style="flex: 1; min-width: 0; box-sizing: border-box; resize:vertical; min-height: 40px; padding: 4px; font-family: monospace; font-size: 11px;" :value="helpers.getPropValue(cls, pkey, isDark)" @input="helpers.setPropValue(cls, pkey, $event.target.value, isDark)"></textarea>
 
                     <input v-else class="prop-input-mini w-100" :value="helpers.getPropValue(cls, pkey, isDark)" @input="helpers.setPropValue(cls, pkey, $event.target.value, isDark)">
                     

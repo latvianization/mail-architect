@@ -563,6 +563,7 @@ body.dragging .btn-add-inline{opacity:0.1;pointer-events:none}
 .prop-item-label span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .prop-item-controls { display: flex; align-items: center; gap: 4px; width: 100%; }
+.prop-item-controls > * { min-width: 0; }
 
 .w-100 { width: 100% !important; }
 
@@ -575,10 +576,10 @@ body.dragging .btn-add-inline{opacity:0.1;pointer-events:none}
   border-color: #6366f1; background: #fff; box-shadow: 0 0 0 2px rgba(99,102,241,0.05);
 }
 
-.unit-input-group { display: flex; align-items: center; width: 100%; }
+.unit-input-group { display: flex; align-items: center; flex: 1; min-width: 0; }
 
-.color-compact { display: flex; align-items: center; gap: 4px; width: 100%; }
-.color-compact .prop-input-mini { flex: 1; }
+.color-compact { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0; }
+.color-compact .prop-input-mini { flex: 1; min-width: 0; }
 .color-swatch-mini {
   width: 20px; height: 20px; border-radius: 4px; border: 1px solid #e2e8f0;
   cursor: pointer; position: relative; overflow: hidden; flex-shrink: 0;
