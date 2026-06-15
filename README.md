@@ -1,4 +1,4 @@
-# MailArchitect
+# MailArchitect [Available online]([https://vuejs.org/](https://latvianization.github.io/mail-architect/))
 
 ![MailArchitect Hero](assets/hero.png)
 
