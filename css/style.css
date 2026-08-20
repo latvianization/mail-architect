@@ -482,6 +482,13 @@ body.dragging .btn-add-inline{opacity:0.1;pointer-events:none}
   border-radius:0 0 12px 12px;padding:16px;font-size:14px;
   line-height:1.6;background:#fff;outline:none;overflow-y:auto;
 }
+.rte-editor ul, .rte-editor ol {
+  padding-left: 20px;
+  margin: 6px 0;
+}
+.rte-editor li {
+  margin-bottom: 2px;
+}
 .rte-editor:focus{border-color:#6366f1;box-shadow:0 0 0 4px rgba(99,102,241,0.08)}
 
 /* Link Popup */

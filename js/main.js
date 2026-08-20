@@ -1237,6 +1237,23 @@ const app = createApp({
         onRteInput();
       }
     }
+    function handleRteEnter(e) {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        let node = sel.anchorNode;
+        if (node && node.nodeType === Node.TEXT_NODE) {
+          node = node.parentElement;
+        }
+        const li = node ? node.closest('li') : null;
+        if (li && rteEl.value && rteEl.value.contains(li)) {
+          // Inside a list item, allow default Enter behavior to create a new item or exit list
+          return;
+        }
+      }
+      e.preventDefault();
+      insertRteBr();
+      onRteInput();
+    }
     function insertRteBr() {
       document.execCommand('insertHTML', false, '<br>');
     }
@@ -1939,7 +1956,7 @@ const app = createApp({
       importOpen, importText, importErr, importFileInput, triggerImport, handleFileImport, applyImport, openImportModal,
       hoverNodeId, setHoverNode,
       prevSel, openLinkFromPreview,
-      showRawHtml, rteEl, linkInput, linkPop, execFmt, isFmt, startLink, applyLink, removeLink, removeLinkFromPopup, onRteInput, onRteClick, insertRteBr, handleRteKeydown,
+      showRawHtml, rteEl, linkInput, linkPop, execFmt, isFmt, startLink, applyLink, removeLink, removeLinkFromPopup, onRteInput, onRteClick, insertRteBr, handleRteEnter, handleRteKeydown,
       leftW, treeW, rightW, startResize,
       showAdvanced, showAdvancedInline, openCatsMap, toggleCategory, isCategoryOpen,
 
